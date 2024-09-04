@@ -11,7 +11,7 @@ val authorName = "ccbluex"
 val projectUrl = "https://github.com/ccbluex/netty-httpserver"
 
 group = "net.ccbluex"
-version = "1.0.0"
+version = "2.0.0"
 
 repositories {
     mavenCentral()
@@ -37,8 +37,8 @@ dependencies {
     implementation("org.apache.tika:tika-core:2.9.2")
 
     testImplementation(kotlin("test"))
-    // https://mvnrepository.com/artifact/org.mockito/mockito-core
-    testImplementation("org.mockito:mockito-core:5.13.0")
+    testImplementation("com.squareup.retrofit2:retrofit:2.9.0")
+    testImplementation("com.squareup.retrofit2:converter-gson:2.9.0")
 }
 
 tasks.test {

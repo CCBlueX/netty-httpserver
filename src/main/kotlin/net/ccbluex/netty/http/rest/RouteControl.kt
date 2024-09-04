@@ -21,144 +21,242 @@ package net.ccbluex.netty.http.rest
 
 import io.netty.handler.codec.http.FullHttpResponse
 import io.netty.handler.codec.http.HttpMethod
-import net.ccbluex.netty.http.HttpServer.Companion.logger
 import net.ccbluex.netty.http.util.httpFile
 import net.ccbluex.netty.http.util.httpForbidden
 import net.ccbluex.netty.http.util.httpNotFound
 import net.ccbluex.netty.http.model.RequestObject
 import java.io.File
 
-class RouteController : RestNode("")
-
-@Suppress("TooManyFunctions")
-open class RestNode(val path: String) {
-
-    private val nodes = mutableListOf<RestNode>()
-
-    fun new(path: String) = RestNode(path).also { nodes += it }
-
-    fun get(path: String, handler: (RequestObject) -> FullHttpResponse)
-        = Route(path, HttpMethod.GET, handler).also { nodes += it }
-
-    fun post(path: String, handler: (RequestObject) -> FullHttpResponse)
-        = Route(path, HttpMethod.POST, handler).also { nodes += it }
-
-    fun put(path: String, handler: (RequestObject) -> FullHttpResponse)
-        = Route(path, HttpMethod.PUT, handler).also { nodes += it }
-
-    fun delete(path: String, handler: (RequestObject) -> FullHttpResponse)
-        = Route(path, HttpMethod.DELETE, handler).also { nodes += it }
-
-    fun patch(path: String, handler: (RequestObject) -> FullHttpResponse)
-        = Route(path, HttpMethod.PATCH, handler).also { nodes += it }
-
-    fun head(path: String, handler: (RequestObject) -> FullHttpResponse)
-        = Route(path, HttpMethod.HEAD, handler).also { nodes += it }
-
-    fun options(path: String, handler: (RequestObject) -> FullHttpResponse)
-        = Route(path, HttpMethod.OPTIONS, handler).also { nodes += it }
-
-    fun trace(path: String, handler: (RequestObject) -> FullHttpResponse)
-        = Route(path, HttpMethod.TRACE, handler).also { nodes += it }
-
-    fun file(path: String, baseFolder: File) = FileServant(path, baseFolder).also { nodes += it }
+/**
+ * Controller for handling routing of HTTP requests.
+ */
+class RouteController : Node("") {
 
     /**
-     * Find a route for the given URI path and http method
+     * Data class representing a destination node in the routing tree.
      *
-     * @param path URI path
-     * @param method HTTP method
-     * @return Route or null if no route was found
-     *
-     * @example findRoute("/api/v1/users", HttpMethod.GET)
+     * @property length The length of the path to the destination.
+     * @property destination The destination node.
+     * @property params The parameters extracted from the path.
+     * @property remainingPath The remaining part of the path after reaching the destination.
      */
-    fun findRoute(path: String, method: HttpMethod): Route? {
-        logger.debug("FR --------- ${if (this is Route) "ROUTE" else "NODE"} ${this.path} ---------")
+    internal data class Destination(
+        val destination: Node,
+        val params: Map<String, String>,
+        val remainingPath: String
+    )
 
-        val takenOff = path.substring(this.path.length)
-        logger.debug("Search for route: {} {}", method, takenOff)
+    /**
+     * Finds the destination node for a given path and HTTP method.
+     *
+     * @param path The path to find the destination for.
+     * @param method The HTTP method of the request.
+     * @return The destination node and associated information, or null if no destination is found.
+     */
+    internal fun processPath(path: String, method: HttpMethod): Destination? {
+        val pathArray = path.asPathArray()
+            .also { if (it.isEmpty()) throw IllegalArgumentException("Path cannot be empty") }
 
-        // Nodes can now either include a route with the correct method or a node with a path that matches
-        // the given path
-        val nodes = nodes.filter {
-            logger.debug("Check node: $takenOff startsWith ${it.path} -> ${path.startsWith(it.path)}")
-            takenOff.startsWith(it.path)
-        }
-
-        logger.debug("Found ${nodes.size} nodes")
-
-        // Now we have to decide if the route matches the path exactly or if it is a node step
-        val exactMatch = nodes.filterIsInstance<Route>().find {
-            logger.debug("Check route: {} == {} && {} == {}", it.path, takenOff, it.method, method)
-            it.method == method && it.path == takenOff
-        }
-        if (exactMatch != null) {
-            return exactMatch
-        }
-
-        logger.debug("No exact match found")
-
-        // If we have no exact match we have to find the node that matches the path
-        val nodeMatch = nodes.firstOrNull() ?: return null
-        logger.debug("Found node match: ${nodeMatch.path}")
-        return nodeMatch.findRoute(takenOff, method)
+        return travelNode(this, pathArray, method, 0, mutableMapOf())
     }
 
     /**
-     * Find a route for the given URI path and http method
+     * Recursively find the destination node by traversing through deeper nodes first.
      *
-     * @param path URI path
-     * @param method HTTP method
-     * @return Route or null if no route was found
-     *
-     * @example findRoute("/api/v1/users", HttpMethod.GET)
+     * @param currentNode The current node in the traversal.
+     * @param pathArray The array of path segments.
+     * @param method The HTTP method of the request.
+     * @param index The current index in the path array.
+     * @param params The map of parameters extracted from the path.
+     * @return The destination node and associated information, or null if no destination is found.
      */
-    fun findFileServant(path: String): Pair<FileServant, String>? {
-        logger.debug("FFS --------- ${if (this is Route) "ROUTE" else "NODE"} ${this.path} ---------")
+    private fun travelNode(
+        currentNode: Node,
+        pathArray: Array<String>,
+        method: HttpMethod,
+        index: Int,
+        params: MutableMap<String, String>
+    ): Destination? {
+        if (index < pathArray.size) {
+            val part = pathArray[index]
+            val matchingNodes = currentNode.nodes.filter { it.matches(index, part) }
 
-        val takenOff = path.substring(this.path.length)
-        logger.debug("Search for file servant: {}", takenOff)
+            for (node in matchingNodes) {
+                val newParams = params.toMutableMap()
 
-        // Nodes can now either include a route with the correct method or a node with a path that matches
-        // the given path
-        val nodes = nodes.filter {
-            logger.debug("Check node: $takenOff startsWith ${it.path} -> ${path.startsWith(it.path)}")
-            takenOff.startsWith(it.path)
+                if (node.isParam) {
+                    newParams[node.part.substring(1)] = part
+                }
+
+                val result = travelNode(node, pathArray, method, index + 1, newParams)
+                if (result != null) {
+                    return result
+                }
+            }
         }
 
-        logger.debug("Found ${nodes.size} nodes")
-
-        // Now we have to decide if the file servant matches the path exactly or if it is a node step
-        val exactMatch = nodes.filterIsInstance<FileServant>().firstOrNull()
-        if (exactMatch != null) {
-            return exactMatch to takenOff
+        return if (currentNode.matchesMethod(method)) {
+            Destination(currentNode, params, pathArray.joinToString("/"))
+        } else {
+            null
         }
-
-        logger.debug("No exact match found")
-
-        // If we have no exact match we have to find the node that matches the path
-        val nodeMatch = nodes.firstOrNull() ?: return null
-        logger.debug("Found node match: ${nodeMatch.path}")
-        return nodeMatch.findFileServant(takenOff)
     }
 
 }
 
-open class Route(name: String, val method: HttpMethod, val handler: (RequestObject) -> FullHttpResponse)
-    : RestNode(name)
+/**
+ * Represents a node in the routing tree.
+ *
+ * @property part The part of the path this node represents.
+ */
+@Suppress("TooManyFunctions")
+open class Node(val part: String) {
 
-class FileServant(val name: String, private val baseFolder: File) : RestNode(name) {
+    open val isRoot = part.isEmpty()
+    open val isExecutable = false
+    val isParam = part.startsWith(":")
 
-    internal fun handleFileRequest(path: String): FullHttpResponse {
-        val filePath = path.substring(name.length).let {
-            if (it.startsWith("/")) it.substring(1) else it
+    internal val nodes = mutableListOf<Node>()
+
+    init {
+        if (part.contains("/")) {
+            error("Part cannot contain slashes")
         }
+    }
 
-        val sanitizedPath = filePath.replace("..", "")
+    /**
+     * Adds a path to the routing tree and executes a block to configure the path.
+     *
+     * @param path The path of the route.
+     * @param block The block to execute for the path.
+     */
+    fun withPath(path: String, block: Node.() -> Unit) {
+        chain({ Node(it).apply(block) }, *path.asPathArray())
+    }
+
+    /**
+     * Adds a route to the routing tree.
+     *
+     * @param path The path of the route.
+     * @param method The HTTP method of the route.
+     * @param handler The handler function for the route.
+     * @return The node representing the route.
+     */
+    fun route(path: String, method: HttpMethod, handler: (RequestObject) -> FullHttpResponse) =
+        chain({ Route(it, method, handler) }, *path.asPathArray())
+
+    /**
+     * Adds a file servant to the routing tree.
+     *
+     * @param path The path of the file servant.
+     * @param baseFolder The base folder for serving files.
+     * @return The node representing the file servant.
+     */
+    fun file(path: String, baseFolder: File) =
+        chain({ FileServant(it, baseFolder) }, *path.asPathArray())
+
+    fun get(path: String, handler: (RequestObject) -> FullHttpResponse)
+            = route(path, HttpMethod.GET, handler)
+
+    fun post(path: String, handler: (RequestObject) -> FullHttpResponse)
+            = route(path, HttpMethod.POST, handler)
+
+    fun put(path: String, handler: (RequestObject) -> FullHttpResponse)
+            = route(path, HttpMethod.PUT, handler)
+
+    fun delete(path: String, handler: (RequestObject) -> FullHttpResponse)
+            = route(path, HttpMethod.DELETE, handler)
+
+    fun patch(path: String, handler: (RequestObject) -> FullHttpResponse)
+            = route(path, HttpMethod.PATCH, handler)
+
+    fun head(path: String, handler: (RequestObject) -> FullHttpResponse)
+            = route(path, HttpMethod.HEAD, handler)
+
+    fun options(path: String, handler: (RequestObject) -> FullHttpResponse)
+            = route(path, HttpMethod.OPTIONS, handler)
+
+    fun trace(path: String, handler: (RequestObject) -> FullHttpResponse)
+            = route(path, HttpMethod.TRACE, handler)
+
+    /**
+     * Chains nodes together to form a path in the routing tree.
+     *
+     * @param destination The function to create the destination node.
+     * @param parts The parts of the path.
+     * @return The final node in the chain.
+     */
+    private fun chain(destination: (String) -> Node, vararg parts: String): Node {
+        return when (parts.size) {
+            0 -> throw IllegalArgumentException("Parts cannot be empty")
+            1 -> destination(parts[0]).also { nodes += it }
+            else -> {
+                val node = nodes.find { it.part == parts[0] } ?: Node(parts[0]).also { nodes += it }
+                node.chain(destination, *parts.copyOfRange(1, parts.size))
+            }
+        }
+    }
+
+    /**
+     * Handles an HTTP request.
+     *
+     * @param requestObject The request object.
+     * @return The HTTP response.
+     */
+    open fun handleRequest(requestObject: RequestObject): FullHttpResponse {
+        error("Node does not implement handleRequest")
+    }
+
+    /**
+     * Checks if the node matches a part of the path and HTTP method.
+     *
+     * @param part The part of the path.
+     * @param method The HTTP method.
+     * @return True if the node matches, false otherwise.
+     */
+    open fun matches(index: Int, part: String) =
+        this.part.equals(part, true) || isParam
+
+    /**
+     * Checks if the node matches a part of the path and HTTP method.
+     */
+    open fun matchesMethod(method: HttpMethod) = isExecutable
+
+}
+
+/**
+ * Represents a route in the routing tree.
+ *
+ * @property part The part of the path this node represents.
+ * @property method The HTTP method of the route.
+ * @property handler The handler function for the route.
+ */
+open class Route(name: String, private val method: HttpMethod, val handler: (RequestObject) -> FullHttpResponse)
+    : Node(name) {
+    override val isExecutable = true
+    override fun handleRequest(requestObject: RequestObject) = handler(requestObject)
+    override fun matchesMethod(method: HttpMethod) =
+        this.method == method && super.matchesMethod(method)
+
+}
+
+/**
+ * Represents a file servant in the routing tree.
+ *
+ * @property part The part of the path this node represents.
+ * @property baseFolder The base folder for serving files.
+ */
+class FileServant(part: String, private val baseFolder: File) : Node(part) {
+
+    override val isExecutable = true
+
+    override fun handleRequest(requestObject: RequestObject): FullHttpResponse {
+        val path = requestObject.remainingPath
+        val sanitizedPath = path.replace("..", "")
         val file = baseFolder.resolve(sanitizedPath)
 
         return when {
-            !file.exists() -> httpNotFound(filePath, "File not found")
+            !file.exists() -> httpNotFound(path, "File not found")
             !file.isFile -> {
                 val indexFile = file.resolve("index.html")
 
@@ -172,4 +270,16 @@ class FileServant(val name: String, private val baseFolder: File) : RestNode(nam
         }
     }
 
+    override fun matches(index: Int, part: String) = super.matches(index, part) || index == 0 && isRoot
+
+    override fun matchesMethod(method: HttpMethod) =
+        method == HttpMethod.GET && super.matchesMethod(method)
+
 }
+
+/**
+ * Convert a string to an array of path parts and drop the first empty part.
+ *
+ * @return An array of path parts.
+ */
+private fun String.asPathArray() = split("/").drop(1).toTypedArray()

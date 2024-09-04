@@ -28,7 +28,6 @@ import io.netty.handler.codec.http.LastHttpContent
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory
 import net.ccbluex.netty.http.HttpServer.Companion.logger
 import net.ccbluex.netty.http.model.RequestContext
-import net.ccbluex.netty.http.model.RequestObject
 import net.ccbluex.netty.http.websocket.WebSocketHandler
 import java.net.URLDecoder
 
@@ -109,11 +108,10 @@ internal class HttpServerHandler(private val server: HttpServer) : ChannelInboun
 
                 // If this is the last content, process the request
                 if (msg is LastHttpContent) {
-                    val requestObject = RequestObject(requestContext)
                     localRequestContext.remove()
 
                     val httpConductor = HttpConductor(server)
-                    val response = httpConductor.processRequestObject(requestObject)
+                    val response = httpConductor.processRequestContext(requestContext)
                     ctx.writeAndFlush(response)
                 }
             }

@@ -9,7 +9,7 @@ Netty HttpServer is a Kotlin-based library for building web REST APIs on top of 
 To include Netty HttpServer in your project, add the following dependency to your `build.gradle` file:
 
 ```gradle
-implementation 'com.github.CCBlueX:netty-httpserver:1.0.0'
+implementation 'com.github.CCBlueX:netty-httpserver:2.0.0'
 ```
 
 ### Basic Usage

@@ -20,6 +20,7 @@
 package net.ccbluex.netty.http.websocket
 
 import io.netty.channel.ChannelHandlerContext
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame
 import io.netty.handler.codec.http.websocketx.WebSocketFrame
 
 /**
@@ -39,12 +40,12 @@ class WebSocketController {
      * @param message The message to broadcast.
      * @param failure The action to take if a failure occurs.
      */
-    fun broadcast(message: WebSocketFrame, failure: (ChannelHandlerContext, Throwable) -> Unit = { _, _ -> }) {
-        activeContexts.forEach {
+    fun broadcast(text: String, failure: (ChannelHandlerContext, Throwable) -> Unit = { _, _ -> }) {
+        activeContexts.forEach { handlerContext ->
             try {
-                it.writeAndFlush(message)
+                handlerContext.channel().writeAndFlush(TextWebSocketFrame(text))
             } catch (e: Throwable) {
-                failure(it, e)
+                failure(handlerContext, e)
             }
         }
     }
@@ -53,8 +54,8 @@ class WebSocketController {
      * Closes all active contexts.
      */
     fun closeAll() {
-        activeContexts.forEach {
-            it.close()
+        activeContexts.forEach { handlerContext ->
+            handlerContext.channel().close()
         }
     }
 

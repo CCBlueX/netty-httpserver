@@ -51,5 +51,6 @@ private fun getUriParams(uri: String): Map<String, String> {
                     { v1: String?, v2: String -> v2 })
             )
     }
-    return HashMap()
+
+    return emptyMap()
 }
