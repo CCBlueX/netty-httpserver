@@ -58,9 +58,6 @@ internal class HttpConductor(private val server: HttpServer) {
             val httpHeaders = response.headers()
             httpHeaders[HttpHeaderNames.CONTENT_TYPE] = "text/plain"
             httpHeaders[HttpHeaderNames.CONTENT_LENGTH] = response.content().readableBytes()
-            httpHeaders[HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN] = "*"
-            httpHeaders[HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS] = "GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS"
-            httpHeaders[HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS] = "Content-Type, Content-Length, Authorization, Accept, X-Requested-With"
             return@runCatching response
         }
 

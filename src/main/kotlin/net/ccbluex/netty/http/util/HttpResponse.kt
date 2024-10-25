@@ -47,9 +47,7 @@ fun httpResponse(status: HttpResponseStatus, contentType: String = "text/plain",
     val httpHeaders = response.headers()
     httpHeaders[HttpHeaderNames.CONTENT_TYPE] = contentType
     httpHeaders[HttpHeaderNames.CONTENT_LENGTH] = response.content().readableBytes()
-    httpHeaders[HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN] = "*"
-    httpHeaders[HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS] = "GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS"
-    httpHeaders[HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS] = "Content-Type, Content-Length, Authorization, Accept, X-Requested-With"
+
     return response
 }
 
@@ -140,7 +138,6 @@ fun httpFile(file: File): FullHttpResponse {
     val httpHeaders = response.headers()
     httpHeaders[HttpHeaderNames.CONTENT_TYPE] = tika.detect(file)
     httpHeaders[HttpHeaderNames.CONTENT_LENGTH] = response.content().readableBytes()
-    httpHeaders[HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN] = "*"
     return response
 }
 
@@ -162,7 +159,70 @@ fun httpFileStream(stream: InputStream): FullHttpResponse {
     val httpHeaders = response.headers()
     httpHeaders[HttpHeaderNames.CONTENT_TYPE] = tika.detect(bytes)
     httpHeaders[HttpHeaderNames.CONTENT_LENGTH] = response.content().readableBytes()
-    httpHeaders[HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN] = "*"
 
     return response
+}
+
+/**
+ * Creates an HTTP 204 No Content response.
+ *
+ * @return A FullHttpResponse object.
+ */
+fun httpNoContent(): FullHttpResponse {
+    val response = DefaultFullHttpResponse(
+        HttpVersion.HTTP_1_1,
+        HttpResponseStatus.NO_CONTENT
+    )
+
+    val httpHeaders = response.headers()
+    httpHeaders[HttpHeaderNames.CONTENT_LENGTH] = 0
+    return response
+}
+
+/**
+ * Creates an HTTP 405 Method Not Allowed response with the given method.
+ *
+ * @param method The method that is not allowed.
+ * @return A FullHttpResponse object.
+ */
+fun httpMethodNotAllowed(method: String): FullHttpResponse {
+    val jsonObject = JsonObject()
+    jsonObject.addProperty("method", method)
+    return httpResponse(HttpResponseStatus.METHOD_NOT_ALLOWED, jsonObject)
+}
+
+/**
+ * Creates an HTTP 401 Unauthorized response with the given reason.
+ *
+ * @param reason The reason for the 401 error.
+ * @return A FullHttpResponse object.
+ */
+fun httpUnauthorized(reason: String): FullHttpResponse {
+    val jsonObject = JsonObject()
+    jsonObject.addProperty("reason", reason)
+    return httpResponse(HttpResponseStatus.UNAUTHORIZED, jsonObject)
+}
+
+/**
+ * Creates an HTTP 429 Too Many Requests response with the given reason.
+ *
+ * @param reason The reason for the 429 error.
+ * @return A FullHttpResponse object.
+ */
+fun httpTooManyRequests(reason: String): FullHttpResponse {
+    val jsonObject = JsonObject()
+    jsonObject.addProperty("reason", reason)
+    return httpResponse(HttpResponseStatus.TOO_MANY_REQUESTS, jsonObject)
+}
+
+/**
+ * Creates an HTTP 503 Service Unavailable response with the given reason.
+ *
+ * @param reason The reason for the 503 error.
+ * @return A FullHttpResponse object.
+ */
+fun httpServiceUnavailable(reason: String): FullHttpResponse {
+    val jsonObject = JsonObject()
+    jsonObject.addProperty("reason", reason)
+    return httpResponse(HttpResponseStatus.SERVICE_UNAVAILABLE, jsonObject)
 }
