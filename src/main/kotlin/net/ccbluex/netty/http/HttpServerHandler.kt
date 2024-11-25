@@ -82,7 +82,7 @@ internal class HttpServerHandler(private val server: HttpServer) : ChannelInboun
                         handshaker.handshake(ctx.channel(), msg)
                     }
 
-                    server.webSocketController.activeContexts += ctx
+                    server.webSocketController.addContext(ctx)
                 } else {
                     val requestContext = RequestContext(
                         msg.method(),

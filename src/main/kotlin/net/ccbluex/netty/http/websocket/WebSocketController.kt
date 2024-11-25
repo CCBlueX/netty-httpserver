@@ -21,7 +21,7 @@ package net.ccbluex.netty.http.websocket
 
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame
-import io.netty.handler.codec.http.websocketx.WebSocketFrame
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * Controller for handling websocket connections.
@@ -32,7 +32,7 @@ class WebSocketController {
      * Keeps track of all connected websocket connections to the server.
      * This is used to broadcast messages to all connected clients.
      */
-    val activeContexts = mutableListOf<ChannelHandlerContext>()
+    private val activeContexts = CopyOnWriteArrayList<ChannelHandlerContext>()
 
     /**
      * Broadcasts a message to all connected clients.
@@ -53,10 +53,30 @@ class WebSocketController {
     /**
      * Closes all active contexts.
      */
-    fun closeAll() {
-        activeContexts.forEach { handlerContext ->
-            handlerContext.channel().close()
+    fun disconnect() {
+        activeContexts.removeIf { handlerContext ->
+            runCatching {
+                handlerContext.channel().close().sync()
+            }.isSuccess
         }
+    }
+
+    /**
+     * Adds a new context to the list of active contexts.
+     *
+     * @param context The context to add.
+     */
+    fun addContext(context: ChannelHandlerContext) {
+        activeContexts.add(context)
+    }
+
+    /**
+     * Removes a context from the list of active contexts.
+     *
+     * @param context The context to remove.
+     */
+    fun removeContext(context: ChannelHandlerContext) {
+        activeContexts.remove(context)
     }
 
 }

@@ -51,7 +51,7 @@ internal class WebSocketHandler(private val server: HttpServer) : ChannelInbound
                     ctx.channel().writeAndFlush(msg.retainedDuplicate())
                     ctx.channel().close().sync()
 
-                    server.webSocketController.activeContexts -= ctx
+                    server.webSocketController.removeContext(ctx)
                     logger.debug("WebSocket closed due to ${msg.reasonText()} (${msg.statusCode()})")
                 }
                 else -> logger.error("Unknown WebSocketFrame type: ${msg.javaClass.name}")
