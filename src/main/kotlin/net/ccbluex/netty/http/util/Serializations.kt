@@ -25,7 +25,7 @@ import io.netty.buffer.ByteBuf
 import io.netty.buffer.ByteBufAllocator
 import java.lang.reflect.Type
 
-private val gson = Gson()
+internal val gson = Gson()
 
 fun ByteBufAllocator.writeJson(
     json: JsonElement,

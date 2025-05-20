@@ -19,8 +19,8 @@
  */
 package net.ccbluex.netty.http.model
 
-import com.google.gson.Gson
 import io.netty.handler.codec.http.HttpMethod
+import net.ccbluex.netty.http.util.gson
 
 /**
  * Represents an HTTP request object.
@@ -51,7 +51,12 @@ data class RequestObject(
      * @return The JSON object of the specified type.
      */
     inline fun <reified T> asJson(): T {
-        return Gson().fromJson(body, T::class.java)
+        return GSON_INSTANCE.fromJson(body, T::class.java)
+    }
+
+    companion object {
+        @JvmField
+        val GSON_INSTANCE = gson
     }
 
 }
