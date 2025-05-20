@@ -55,7 +55,7 @@ class RouteController : Node("") {
      */
     internal fun processPath(path: String, method: HttpMethod): Destination? {
         val pathArray = path.asPathArray()
-            .also { if (it.isEmpty()) throw IllegalArgumentException("Path cannot be empty") }
+        require(pathArray.isNotEmpty()) { "Path cannot be empty" }
 
         return travelNode(this, pathArray, method, 0, mutableMapOf())
     }
@@ -282,4 +282,8 @@ class FileServant(part: String, private val baseFolder: File) : Node(part) {
  *
  * @return An array of path parts.
  */
-private fun String.asPathArray() = split("/").drop(1).toTypedArray()
+private fun String.asPathArray(): Array<String> {
+    val parts = split("/")
+    return if (parts.size <= 1) emptyArray()
+    else parts.subList(1, parts.size).toTypedArray()
+}
