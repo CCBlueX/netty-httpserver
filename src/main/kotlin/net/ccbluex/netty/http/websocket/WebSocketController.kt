@@ -37,17 +37,19 @@ class WebSocketController {
     /**
      * Broadcasts a message to all connected clients.
      *
-     * @param message The message to broadcast.
+     * @param text The message to broadcast.
      * @param failure The action to take if a failure occurs.
      */
     fun broadcast(text: String, failure: (ChannelHandlerContext, Throwable) -> Unit = { _, _ -> }) {
+        val frame = TextWebSocketFrame(text)
         activeContexts.forEach { handlerContext ->
             try {
-                handlerContext.channel().writeAndFlush(TextWebSocketFrame(text))
+                handlerContext.channel().writeAndFlush(frame.retain())
             } catch (e: Throwable) {
                 failure(handlerContext, e)
             }
         }
+        frame.release()
     }
 
     /**
