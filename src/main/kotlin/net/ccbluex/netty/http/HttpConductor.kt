@@ -19,7 +19,6 @@
  */
 package net.ccbluex.netty.http
 
-import io.netty.buffer.Unpooled
 import io.netty.handler.codec.http.*
 import net.ccbluex.netty.http.HttpServer.Companion.logger
 import net.ccbluex.netty.http.model.RequestContext
@@ -28,7 +27,6 @@ import net.ccbluex.netty.http.util.httpInternalServerError
 import net.ccbluex.netty.http.util.httpNotFound
 import net.ccbluex.netty.http.model.RequestObject
 import net.ccbluex.netty.http.util.httpNoContent
-import net.ccbluex.netty.http.util.httpResponse
 
 internal class HttpConductor(private val server: HttpServer) {
 
