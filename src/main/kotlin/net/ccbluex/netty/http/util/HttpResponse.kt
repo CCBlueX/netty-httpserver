@@ -25,6 +25,7 @@ import io.netty.buffer.PooledByteBufAllocator
 import io.netty.handler.codec.http.*
 import org.apache.tika.Tika
 import java.io.File
+import java.io.IOException
 import java.io.InputStream
 
 /**
@@ -159,20 +160,9 @@ private val tika = Tika()
  * @return A FullHttpResponse object.
  */
 fun httpFile(file: File): FullHttpResponse {
-    val buf = file.inputStream().channel.use { channel ->
-        val size = channel.size().toInt()
-        val buf = PooledByteBufAllocator.DEFAULT.buffer(size)
-        while (buf.writableBytes() > 0) {
-            val written = buf.writeBytes(channel, buf.writableBytes())
-            if (written <= 0) break
-        }
-        buf
-    }
-
-    return httpResponse(
-        status = HttpResponseStatus.OK,
+    return httpFileStream(
+        file.inputStream(),
         contentType = tika.detect(file),
-        content = buf
     )
 }
 
@@ -180,24 +170,36 @@ fun httpFile(file: File): FullHttpResponse {
  * Creates an HTTP response for the given input stream.
  *
  * @param stream The input stream to be included in the response.
+ * It will be closed after reading.
+ * @param contentType The content type of [stream].
+ * Defaults to `null`, which means to auto-detect by [Tika].
  * @return A FullHttpResponse object.
  */
-fun httpFileStream(stream: InputStream): FullHttpResponse {
+@JvmOverloads
+fun httpFileStream(
+    stream: InputStream,
+    contentType: String? = null
+): FullHttpResponse {
     val allocator = PooledByteBufAllocator.DEFAULT
     val buf = allocator.buffer()
 
-    val tmp = ByteArray(8192)
-    while (true) {
-        val read = stream.read(tmp)
-        if (read == -1) break
-        buf.writeBytes(tmp, 0, read)
-    }
+    try {
+        stream.use {
+            while (true) {
+                val read = buf.writeBytes(stream, 8192)
+                if (read == -1) break
+            }
+        }
 
-    return httpResponse(
-        status = HttpResponseStatus.OK,
-        contentType = tika.detect(buf.duplicate().inputStream()),
-        content = buf
-    )
+        return httpResponse(
+            status = HttpResponseStatus.OK,
+            contentType = contentType ?: tika.detect(buf.duplicate().inputStream()),
+            content = buf
+        )
+    } catch (e: IOException) {
+        buf.release()
+        return httpInternalServerError(e.stackTraceToString())
+    }
 }
 
 /**
