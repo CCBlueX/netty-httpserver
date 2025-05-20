@@ -26,7 +26,6 @@ import io.netty.handler.codec.http.*
 import org.apache.tika.Tika
 import java.io.File
 import java.io.InputStream
-import java.lang.reflect.Type
 
 /**
  * Creates an HTTP response with the given status, content type, and content.
@@ -92,10 +91,10 @@ fun httpResponse(status: HttpResponseStatus, json: JsonElement) = httpResponse(
  * @param json The JSON content of the response.
  * @return A FullHttpResponse object.
  */
-fun <T> httpResponse(status: HttpResponseStatus, json: T, type: Type) = httpResponse(
+fun <T> httpResponse(status: HttpResponseStatus, json: T) = httpResponse(
     status,
     "application/json",
-    PooledByteBufAllocator.DEFAULT.writeJson(json, type)
+    PooledByteBufAllocator.DEFAULT.writeJson(json, (json as Any).javaClass)
 )
 
 /**
@@ -115,7 +114,7 @@ fun httpOk(jsonElement: JsonElement) = httpResponse(HttpResponseStatus.OK, jsonE
  */
 fun httpNotFound(path: String, reason: String): FullHttpResponse {
     data class ResponseBody(val path: String, val reason: String)
-    return httpResponse(HttpResponseStatus.NOT_FOUND, ResponseBody(path, reason), ResponseBody::class.java)
+    return httpResponse(HttpResponseStatus.NOT_FOUND, ResponseBody(path, reason))
 }
 
 /**
@@ -126,7 +125,7 @@ fun httpNotFound(path: String, reason: String): FullHttpResponse {
  */
 fun httpInternalServerError(exception: String): FullHttpResponse {
     data class ResponseBody(val reason: String)
-    return httpResponse(HttpResponseStatus.INTERNAL_SERVER_ERROR, ResponseBody(exception), ResponseBody::class.java)
+    return httpResponse(HttpResponseStatus.INTERNAL_SERVER_ERROR, ResponseBody(exception))
 }
 
 /**
@@ -137,7 +136,7 @@ fun httpInternalServerError(exception: String): FullHttpResponse {
  */
 fun httpForbidden(reason: String): FullHttpResponse {
     data class ResponseBody(val reason: String)
-    return httpResponse(HttpResponseStatus.FORBIDDEN, ResponseBody(reason), ResponseBody::class.java)
+    return httpResponse(HttpResponseStatus.FORBIDDEN, ResponseBody(reason))
 }
 
 /**
@@ -148,7 +147,7 @@ fun httpForbidden(reason: String): FullHttpResponse {
  */
 fun httpBadRequest(reason: String): FullHttpResponse {
     data class ResponseBody(val reason: String)
-    return httpResponse(HttpResponseStatus.BAD_REQUEST, ResponseBody(reason), ResponseBody::class.java)
+    return httpResponse(HttpResponseStatus.BAD_REQUEST, ResponseBody(reason))
 }
 
 private val tika = Tika()
@@ -225,7 +224,7 @@ fun httpNoContent(): FullHttpResponse {
  */
 fun httpMethodNotAllowed(method: String): FullHttpResponse {
     data class ResponseBody(val method: String)
-    return httpResponse(HttpResponseStatus.METHOD_NOT_ALLOWED, ResponseBody(method), ResponseBody::class.java)
+    return httpResponse(HttpResponseStatus.METHOD_NOT_ALLOWED, ResponseBody(method))
 }
 
 /**
@@ -236,7 +235,7 @@ fun httpMethodNotAllowed(method: String): FullHttpResponse {
  */
 fun httpUnauthorized(reason: String): FullHttpResponse {
     data class ResponseBody(val reason: String)
-    return httpResponse(HttpResponseStatus.UNAUTHORIZED, ResponseBody(reason), ResponseBody::class.java)
+    return httpResponse(HttpResponseStatus.UNAUTHORIZED, ResponseBody(reason))
 }
 
 /**
@@ -247,7 +246,7 @@ fun httpUnauthorized(reason: String): FullHttpResponse {
  */
 fun httpTooManyRequests(reason: String): FullHttpResponse {
     data class ResponseBody(val reason: String)
-    return httpResponse(HttpResponseStatus.TOO_MANY_REQUESTS, ResponseBody(reason), ResponseBody::class.java)
+    return httpResponse(HttpResponseStatus.TOO_MANY_REQUESTS, ResponseBody(reason))
 }
 
 /**
@@ -258,5 +257,5 @@ fun httpTooManyRequests(reason: String): FullHttpResponse {
  */
 fun httpServiceUnavailable(reason: String): FullHttpResponse {
     data class ResponseBody(val reason: String)
-    return httpResponse(HttpResponseStatus.SERVICE_UNAVAILABLE, ResponseBody(reason), ResponseBody::class.java)
+    return httpResponse(HttpResponseStatus.SERVICE_UNAVAILABLE, ResponseBody(reason))
 }
