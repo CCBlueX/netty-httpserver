@@ -16,7 +16,7 @@ repositories {
 }
 
 dependencies {
-    implementation("net.ccbluex:netty-httpserver:2.1.1")
+    implementation("net.ccbluex:netty-httpserver:2.2.0")
 }
 ```
 
@@ -30,7 +30,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'net.ccbluex:netty-httpserver:2.1.1'
+    implementation 'net.ccbluex:netty-httpserver:2.2.0'
 }
 ```
 
@@ -48,7 +48,7 @@ dependencies {
     <dependency>
         <groupId>net.ccbluex</groupId>
         <artifactId>netty-httpserver</artifactId>
-        <version>2.1.1</version>
+        <version>2.2.0</version>
     </dependency>
 </dependencies>
 ```
