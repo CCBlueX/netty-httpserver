@@ -52,7 +52,7 @@ internal class HttpConductor(private val server: HttpServer) {
             val response = DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1,
                 HttpResponseStatus.OK,
-                Unpooled.wrappedBuffer(ByteArray(0))
+                Unpooled.EMPTY_BUFFER
             )
 
             val httpHeaders = response.headers()

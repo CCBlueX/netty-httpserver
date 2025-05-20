@@ -20,12 +20,10 @@
 package net.ccbluex.netty.http.model
 
 import io.netty.handler.codec.http.HttpMethod
-import java.util.*
-import java.util.stream.Collectors
 
 data class RequestContext(var httpMethod: HttpMethod, var uri: String, var headers: Map<String, String>) {
     val contentBuffer = StringBuilder()
-    val path = if (uri.contains("?")) uri.substring(0, uri.indexOf('?')) else uri
+    val path = uri.substringBefore('?', uri)
     val params = getUriParams(uri)
 }
 
@@ -33,24 +31,21 @@ data class RequestContext(var httpMethod: HttpMethod, var uri: String, var heade
  * The received uri should be like: '...?param1=value&param2=value'
  */
 private fun getUriParams(uri: String): Map<String, String> {
-    if (uri.contains("?")) {
-        val paramsString = uri.substring(uri.indexOf('?') + 1)
+    val queryString = uri.substringAfter('?', "")
 
-        // in case of duplicated params, will be used la last value
-        return Arrays.stream(
-            if (paramsString.contains("&")) paramsString.split("&".toRegex()).dropLastWhile { it.isEmpty() }
-                .toTypedArray() else arrayOf(paramsString))
-            .map { value: String ->
-                value.split("=".toRegex()).dropLastWhile { it.isEmpty() }
-                    .toTypedArray()
-            }
-            .collect(
-                Collectors.toMap(
-                    { paramValue: Array<String> -> paramValue[0] },
-                    { paramValue: Array<String> -> paramValue[1] },
-                    { v1: String?, v2: String -> v2 })
-            )
+    if (queryString.isEmpty()) {
+        return emptyMap()
     }
 
-    return emptyMap()
+    // in case of duplicated params, will be used the last value
+    return queryString.split('&')
+        .mapNotNull { param ->
+            val index = param.indexOf('=')
+            if (index == -1) null
+            else {
+                val key = param.substring(0, index)
+                val value = param.substring(index + 1)
+                if (key.isNotEmpty()) key to value else null
+            }
+        }.toMap()
 }

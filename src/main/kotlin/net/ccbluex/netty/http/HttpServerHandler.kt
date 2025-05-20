@@ -86,7 +86,7 @@ internal class HttpServerHandler(private val server: HttpServer) : ChannelInboun
                 } else {
                     val requestContext = RequestContext(
                         msg.method(),
-                        URLDecoder.decode(msg.uri(), "UTF-8"),
+                        URLDecoder.decode(msg.uri(), Charsets.UTF_8),
                         msg.headers().associate { it.key to it.value },
                     )
 
