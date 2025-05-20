@@ -26,12 +26,9 @@ import io.netty.channel.epoll.EpollEventLoopGroup
 import io.netty.channel.epoll.EpollServerSocketChannel
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioServerSocketChannel
-import io.netty.handler.codec.http.FullHttpResponse
 import io.netty.handler.logging.LogLevel
 import io.netty.handler.logging.LoggingHandler
 import net.ccbluex.netty.http.middleware.Middleware
-import net.ccbluex.netty.http.middleware.MiddlewareFunction
-import net.ccbluex.netty.http.model.RequestContext
 import net.ccbluex.netty.http.rest.RouteController
 import net.ccbluex.netty.http.websocket.WebSocketController
 import org.apache.logging.log4j.LogManager
@@ -47,18 +44,14 @@ class HttpServer {
     val routeController = RouteController()
     val webSocketController = WebSocketController()
 
-    val middlewares = mutableListOf<MiddlewareFunction>()
+    val middlewares = mutableListOf<Middleware>()
 
     companion object {
         internal val logger = LogManager.getLogger("HttpServer")
     }
 
-    fun middleware(middlewareFunction: MiddlewareFunction) {
-        middlewares += middlewareFunction
-    }
-
     fun middleware(middleware: Middleware) {
-        middlewares += middleware::middleware
+        middlewares += middleware
     }
 
     /**
