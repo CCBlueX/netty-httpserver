@@ -91,10 +91,10 @@ fun httpResponse(status: HttpResponseStatus, json: JsonElement) = httpResponse(
  * @param json The JSON content of the response.
  * @return A FullHttpResponse object.
  */
-fun <T> httpResponse(status: HttpResponseStatus, json: T) = httpResponse(
+fun <T : Any> httpResponse(status: HttpResponseStatus, json: T) = httpResponse(
     status,
     "application/json",
-    PooledByteBufAllocator.DEFAULT.writeJson(json, (json as Any).javaClass)
+    PooledByteBufAllocator.DEFAULT.writeJson(json, json.javaClass)
 )
 
 /**

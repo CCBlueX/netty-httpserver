@@ -27,6 +27,9 @@ import java.lang.reflect.Type
 
 internal val gson = Gson()
 
+/**
+ * Serialize [json] into [ByteBuf] with given [ByteBufAllocator].
+ */
 fun ByteBufAllocator.writeJson(
     json: JsonElement,
 ): ByteBuf {
@@ -38,9 +41,13 @@ fun ByteBufAllocator.writeJson(
     return buf
 }
 
-fun <T> ByteBufAllocator.writeJson(
+/**
+ * Serialize [obj] as [type] into [ByteBuf] with given [ByteBufAllocator].
+ */
+@JvmOverloads
+fun <T : Any> ByteBufAllocator.writeJson(
     obj: T,
-    type: Type
+    type: Type = obj.javaClass,
 ): ByteBuf {
     val buf = buffer(256, Int.MAX_VALUE)
     gson.newJsonWriter(buf.outputStream().writer(Charsets.UTF_8)).use { writer ->
