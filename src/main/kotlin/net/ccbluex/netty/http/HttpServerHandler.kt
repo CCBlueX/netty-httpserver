@@ -86,7 +86,7 @@ internal class HttpServerHandler(private val server: HttpServer) : ChannelInboun
                 } else {
                     val requestContext = RequestContext(
                         msg.method(),
-                        URLDecoder.decode(msg.uri(), "UTF-8"),
+                        URLDecoder.decode(msg.uri(), Charsets.UTF_8),
                         msg.headers().associate { it.key to it.value },
                     )
 
@@ -95,13 +95,12 @@ internal class HttpServerHandler(private val server: HttpServer) : ChannelInboun
             }
 
             is HttpContent -> {
-                if (localRequestContext.get() == null) {
+                val requestContext = localRequestContext.get() ?: run {
                     logger.warn("Received HttpContent without HttpRequest")
                     return
                 }
 
                 // Append content to the buffer
-                val requestContext = localRequestContext.get()
                 requestContext
                     .contentBuffer
                     .append(msg.content().toString(Charsets.UTF_8))
@@ -109,7 +108,7 @@ internal class HttpServerHandler(private val server: HttpServer) : ChannelInboun
                 // If this is the last content, process the request
                 if (msg is LastHttpContent) {
                     localRequestContext.remove()
-                    
+
                     val httpConductor = HttpConductor(server)
                     val response = httpConductor.processRequestContext(requestContext)
                     val httpResponse = server.middlewares.fold(response) { acc, f -> f(requestContext, acc) }

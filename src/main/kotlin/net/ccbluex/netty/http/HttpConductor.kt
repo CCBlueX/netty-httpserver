@@ -19,7 +19,6 @@
  */
 package net.ccbluex.netty.http
 
-import io.netty.buffer.Unpooled
 import io.netty.handler.codec.http.*
 import net.ccbluex.netty.http.HttpServer.Companion.logger
 import net.ccbluex.netty.http.model.RequestContext
@@ -27,6 +26,7 @@ import net.ccbluex.netty.http.util.httpBadRequest
 import net.ccbluex.netty.http.util.httpInternalServerError
 import net.ccbluex.netty.http.util.httpNotFound
 import net.ccbluex.netty.http.model.RequestObject
+import net.ccbluex.netty.http.util.httpNoContent
 
 internal class HttpConductor(private val server: HttpServer) {
 
@@ -48,21 +48,12 @@ internal class HttpConductor(private val server: HttpServer) {
             return@runCatching httpBadRequest("Incomplete request")
         }
 
-        if (method == HttpMethod.OPTIONS) {
-            val response = DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1,
-                HttpResponseStatus.OK,
-                Unpooled.wrappedBuffer(ByteArray(0))
-            )
-
-            val httpHeaders = response.headers()
-            httpHeaders[HttpHeaderNames.CONTENT_TYPE] = "text/plain"
-            httpHeaders[HttpHeaderNames.CONTENT_LENGTH] = response.content().readableBytes()
-            return@runCatching response
-        }
-
         val (node, params, remaining) = server.routeController.processPath(context.path, method) ?:
             return@runCatching httpNotFound(context.path, "Route not found")
+
+        if (method == HttpMethod.OPTIONS) {
+            return@runCatching httpNoContent()
+        }
 
         logger.debug("Found destination {}", node)
         val requestObject = RequestObject(

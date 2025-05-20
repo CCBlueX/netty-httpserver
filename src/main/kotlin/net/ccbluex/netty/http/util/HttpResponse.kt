@@ -19,13 +19,13 @@
  */
 package net.ccbluex.netty.http.util
 
-import com.google.gson.Gson
 import com.google.gson.JsonElement
-import com.google.gson.JsonObject
-import io.netty.buffer.Unpooled
+import io.netty.buffer.ByteBuf
+import io.netty.buffer.PooledByteBufAllocator
 import io.netty.handler.codec.http.*
 import org.apache.tika.Tika
 import java.io.File
+import java.io.IOException
 import java.io.InputStream
 
 /**
@@ -33,15 +33,18 @@ import java.io.InputStream
  *
  * @param status The HTTP response status.
  * @param contentType The content type of the response. Defaults to "text/plain".
- * @param content The content of the response.
+ * @param content The content of the response, in [io.netty.buffer.ByteBuf].
  * @return A FullHttpResponse object.
  */
-fun httpResponse(status: HttpResponseStatus, contentType: String = "text/plain",
-                         content: String): FullHttpResponse {
+fun httpResponse(
+    status: HttpResponseStatus,
+    contentType: String = "text/plain",
+    content: ByteBuf
+): FullHttpResponse {
     val response = DefaultFullHttpResponse(
         HttpVersion.HTTP_1_1,
         status,
-        Unpooled.wrappedBuffer(content.toByteArray())
+        content
     )
 
     val httpHeaders = response.headers()
@@ -52,14 +55,48 @@ fun httpResponse(status: HttpResponseStatus, contentType: String = "text/plain",
 }
 
 /**
+ * Creates an HTTP response with the given status, content type, and content.
+ *
+ * @param status The HTTP response status.
+ * @param contentType The content type of the response. Defaults to "text/plain".
+ * @param content The content of the response, in [String].
+ * @return A FullHttpResponse object.
+ */
+fun httpResponse(
+    status: HttpResponseStatus,
+    contentType: String = "text/plain",
+    content: String
+): FullHttpResponse {
+    val buf = PooledByteBufAllocator.DEFAULT.buffer(content.length * 3)
+    buf.writeCharSequence(content, Charsets.UTF_8)
+    return httpResponse(status, contentType, buf)
+}
+
+/**
  * Creates an HTTP response with the given status and JSON content.
  *
  * @param status The HTTP response status.
  * @param json The JSON content of the response.
  * @return A FullHttpResponse object.
  */
-fun httpResponse(status: HttpResponseStatus, json: JsonElement)
-        = httpResponse(status, "application/json", Gson().toJson(json))
+fun httpResponse(status: HttpResponseStatus, json: JsonElement) = httpResponse(
+    status,
+    "application/json",
+    PooledByteBufAllocator.DEFAULT.writeJson(json)
+)
+
+/**
+ * Creates an HTTP response with the given status and JSON content.
+ *
+ * @param status The HTTP response status.
+ * @param json The JSON content of the response.
+ * @return A FullHttpResponse object.
+ */
+fun <T : Any> httpResponse(status: HttpResponseStatus, json: T) = httpResponse(
+    status,
+    "application/json",
+    PooledByteBufAllocator.DEFAULT.writeJson(json, json.javaClass)
+)
 
 /**
  * Creates an HTTP 200 OK response with the given JSON content.
@@ -67,8 +104,7 @@ fun httpResponse(status: HttpResponseStatus, json: JsonElement)
  * @param jsonElement The JSON content of the response.
  * @return A FullHttpResponse object.
  */
-fun httpOk(jsonElement: JsonElement)
-        = httpResponse(HttpResponseStatus.OK, jsonElement)
+fun httpOk(jsonElement: JsonElement) = httpResponse(HttpResponseStatus.OK, jsonElement)
 
 /**
  * Creates an HTTP 404 Not Found response with the given path and reason.
@@ -78,10 +114,8 @@ fun httpOk(jsonElement: JsonElement)
  * @return A FullHttpResponse object.
  */
 fun httpNotFound(path: String, reason: String): FullHttpResponse {
-    val jsonObject = JsonObject()
-    jsonObject.addProperty("path", path)
-    jsonObject.addProperty("reason", reason)
-    return httpResponse(HttpResponseStatus.NOT_FOUND, jsonObject)
+    data class ResponseBody(val path: String, val reason: String)
+    return httpResponse(HttpResponseStatus.NOT_FOUND, ResponseBody(path, reason))
 }
 
 /**
@@ -91,9 +125,8 @@ fun httpNotFound(path: String, reason: String): FullHttpResponse {
  * @return A FullHttpResponse object.
  */
 fun httpInternalServerError(exception: String): FullHttpResponse {
-    val jsonObject = JsonObject()
-    jsonObject.addProperty("reason", exception)
-    return httpResponse(HttpResponseStatus.INTERNAL_SERVER_ERROR, jsonObject)
+    data class ResponseBody(val reason: String)
+    return httpResponse(HttpResponseStatus.INTERNAL_SERVER_ERROR, ResponseBody(exception))
 }
 
 /**
@@ -103,9 +136,8 @@ fun httpInternalServerError(exception: String): FullHttpResponse {
  * @return A FullHttpResponse object.
  */
 fun httpForbidden(reason: String): FullHttpResponse {
-    val jsonObject = JsonObject()
-    jsonObject.addProperty("reason", reason)
-    return httpResponse(HttpResponseStatus.FORBIDDEN, jsonObject)
+    data class ResponseBody(val reason: String)
+    return httpResponse(HttpResponseStatus.FORBIDDEN, ResponseBody(reason))
 }
 
 /**
@@ -115,9 +147,8 @@ fun httpForbidden(reason: String): FullHttpResponse {
  * @return A FullHttpResponse object.
  */
 fun httpBadRequest(reason: String): FullHttpResponse {
-    val jsonObject = JsonObject()
-    jsonObject.addProperty("reason", reason)
-    return httpResponse(HttpResponseStatus.BAD_REQUEST, jsonObject)
+    data class ResponseBody(val reason: String)
+    return httpResponse(HttpResponseStatus.BAD_REQUEST, ResponseBody(reason))
 }
 
 private val tika = Tika()
@@ -129,38 +160,51 @@ private val tika = Tika()
  * @return A FullHttpResponse object.
  */
 fun httpFile(file: File): FullHttpResponse {
-    val response = DefaultFullHttpResponse(
-        HttpVersion.HTTP_1_1,
-        HttpResponseStatus.OK,
-        Unpooled.wrappedBuffer(file.readBytes())
-    )
+    require(file.length() <= Int.MAX_VALUE) { "File is too big" }
 
-    val httpHeaders = response.headers()
-    httpHeaders[HttpHeaderNames.CONTENT_TYPE] = tika.detect(file)
-    httpHeaders[HttpHeaderNames.CONTENT_LENGTH] = response.content().readableBytes()
-    return response
+    return httpFileStream(
+        file.inputStream(),
+        contentType = tika.detect(file),
+        contentLength = file.length().toInt()
+    )
 }
 
 /**
  * Creates an HTTP response for the given input stream.
  *
- * @param stream The input stream to be included in the response.
+ * @param stream The input stream to be included in the response. It will be closed after reading.
+ * @param contentType The content type of [stream]. Defaults to `null`, which means to auto-detect by [Tika].
+ * @param contentLength The predicated content length of [stream]. Defaults to `256`.
  * @return A FullHttpResponse object.
  */
-fun httpFileStream(stream: InputStream): FullHttpResponse {
-    val bytes = stream.readBytes()
+@JvmOverloads
+fun httpFileStream(
+    stream: InputStream,
+    contentType: String? = null,
+    contentLength: Int = 256,
+): FullHttpResponse {
+    require(contentLength > 0) { "content length must be positive" }
 
-    val response = DefaultFullHttpResponse(
-        HttpVersion.HTTP_1_1,
-        HttpResponseStatus.OK,
-        Unpooled.wrappedBuffer(bytes)
-    )
+    val allocator = PooledByteBufAllocator.DEFAULT
+    val buf = allocator.buffer(contentLength)
 
-    val httpHeaders = response.headers()
-    httpHeaders[HttpHeaderNames.CONTENT_TYPE] = tika.detect(bytes)
-    httpHeaders[HttpHeaderNames.CONTENT_LENGTH] = response.content().readableBytes()
+    try {
+        stream.use {
+            while (true) {
+                val read = buf.writeBytes(stream, 8192)
+                if (read == -1) break
+            }
+        }
 
-    return response
+        return httpResponse(
+            status = HttpResponseStatus.OK,
+            contentType = contentType ?: tika.detect(buf.duplicate().inputStream()),
+            content = buf
+        )
+    } catch (e: IOException) {
+        buf.release()
+        return httpInternalServerError(e.stackTraceToString())
+    }
 }
 
 /**
@@ -186,9 +230,8 @@ fun httpNoContent(): FullHttpResponse {
  * @return A FullHttpResponse object.
  */
 fun httpMethodNotAllowed(method: String): FullHttpResponse {
-    val jsonObject = JsonObject()
-    jsonObject.addProperty("method", method)
-    return httpResponse(HttpResponseStatus.METHOD_NOT_ALLOWED, jsonObject)
+    data class ResponseBody(val method: String)
+    return httpResponse(HttpResponseStatus.METHOD_NOT_ALLOWED, ResponseBody(method))
 }
 
 /**
@@ -198,9 +241,8 @@ fun httpMethodNotAllowed(method: String): FullHttpResponse {
  * @return A FullHttpResponse object.
  */
 fun httpUnauthorized(reason: String): FullHttpResponse {
-    val jsonObject = JsonObject()
-    jsonObject.addProperty("reason", reason)
-    return httpResponse(HttpResponseStatus.UNAUTHORIZED, jsonObject)
+    data class ResponseBody(val reason: String)
+    return httpResponse(HttpResponseStatus.UNAUTHORIZED, ResponseBody(reason))
 }
 
 /**
@@ -210,9 +252,8 @@ fun httpUnauthorized(reason: String): FullHttpResponse {
  * @return A FullHttpResponse object.
  */
 fun httpTooManyRequests(reason: String): FullHttpResponse {
-    val jsonObject = JsonObject()
-    jsonObject.addProperty("reason", reason)
-    return httpResponse(HttpResponseStatus.TOO_MANY_REQUESTS, jsonObject)
+    data class ResponseBody(val reason: String)
+    return httpResponse(HttpResponseStatus.TOO_MANY_REQUESTS, ResponseBody(reason))
 }
 
 /**
@@ -222,7 +263,6 @@ fun httpTooManyRequests(reason: String): FullHttpResponse {
  * @return A FullHttpResponse object.
  */
 fun httpServiceUnavailable(reason: String): FullHttpResponse {
-    val jsonObject = JsonObject()
-    jsonObject.addProperty("reason", reason)
-    return httpResponse(HttpResponseStatus.SERVICE_UNAVAILABLE, jsonObject)
+    data class ResponseBody(val reason: String)
+    return httpResponse(HttpResponseStatus.SERVICE_UNAVAILABLE, ResponseBody(reason))
 }
