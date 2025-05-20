@@ -66,10 +66,22 @@ tasks.withType<Jar> {
     }
 }
 
+val sourcesJar by tasks.creating(Jar::class) {
+    archiveClassifier.set("sources")
+    from(sourceSets.main.get().allSource)
+}
+
+val javadocJar by tasks.creating(Jar::class) {
+    archiveClassifier.set("javadoc")
+    from(tasks.javadoc)
+}
+
 publishing {
     publications {
         create<MavenPublication>("pub") {
             from(components["java"])
+            artifact(tasks["sourcesJar"])
+            artifact(tasks["javadocJar"])
 
             pom {
                 name.set(projectName)
