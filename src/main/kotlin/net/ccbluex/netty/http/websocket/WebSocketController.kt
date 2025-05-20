@@ -44,7 +44,7 @@ class WebSocketController {
         val frame = TextWebSocketFrame(text)
         activeContexts.forEach { handlerContext ->
             try {
-                handlerContext.channel().writeAndFlush(frame.retain())
+                handlerContext.channel().writeAndFlush(frame.retainedDuplicate())
             } catch (e: Throwable) {
                 failure(handlerContext, e)
             }
