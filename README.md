@@ -6,10 +6,51 @@ Netty HttpServer is a Kotlin-based library for building web REST APIs on top of 
 
 ### Installation
 
-To include Netty HttpServer in your project, add the following dependency to your `build.gradle` file:
+To include Netty HttpServer in your project, add the following to your project:
 
-```gradle
-implementation 'com.github.CCBlueX:netty-httpserver:2.0.0'
+#### Gradle (Kotlin DSL)
+
+```kotlin
+repositories {
+    maven("https://maven.ccbluex.net/releases")
+}
+
+dependencies {
+    implementation("net.ccbluex:netty-httpserver:2.1.1")
+}
+```
+
+#### Gradle (Groovy DSL)
+
+```groovy
+repositories {
+    maven {
+        url "https://maven.ccbluex.net/releases"
+    }
+}
+
+dependencies {
+    implementation 'net.ccbluex:netty-httpserver:2.1.1'
+}
+```
+
+#### Maven
+
+```xml
+<repositories>
+    <repository>
+        <id>ccbluex-maven</id>
+        <url>https://maven.ccbluex.net/releases</url>
+    </repository>
+</repositories>
+
+<dependencies>
+    <dependency>
+        <groupId>net.ccbluex</groupId>
+        <artifactId>netty-httpserver</artifactId>
+        <version>2.1.1</version>
+    </dependency>
+</dependencies>
 ```
 
 ### Basic Usage
@@ -77,3 +118,4 @@ Netty HttpServer is developed and maintained by CCBlueX. It was originally part 
 ---
 
 Feel free to explore the examples provided and adapt them to your specific needs. Happy coding!
+

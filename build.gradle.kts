@@ -98,4 +98,18 @@ publishing {
             }
         }
     }
+
+    repositories {
+        maven {
+            name = "ccbluex-maven"
+            url = uri("https://maven.ccbluex.net/releases")
+            credentials {
+                username = System.getenv("MAVEN_TOKEN_NAME")
+                password = System.getenv("MAVEN_TOKEN_SECRET")
+            }
+            authentication {
+                create<BasicAuthentication>("basic")
+            }
+        }
+    }
 }
