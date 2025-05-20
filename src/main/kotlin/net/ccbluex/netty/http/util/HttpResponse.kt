@@ -160,28 +160,33 @@ private val tika = Tika()
  * @return A FullHttpResponse object.
  */
 fun httpFile(file: File): FullHttpResponse {
+    require(file.length() <= Int.MAX_VALUE) { "File is too big" }
+
     return httpFileStream(
         file.inputStream(),
         contentType = tika.detect(file),
+        contentLength = file.length().toInt()
     )
 }
 
 /**
  * Creates an HTTP response for the given input stream.
  *
- * @param stream The input stream to be included in the response.
- * It will be closed after reading.
- * @param contentType The content type of [stream].
- * Defaults to `null`, which means to auto-detect by [Tika].
+ * @param stream The input stream to be included in the response. It will be closed after reading.
+ * @param contentType The content type of [stream]. Defaults to `null`, which means to auto-detect by [Tika].
+ * @param contentLength The predicated content length of [stream]. Defaults to `256`.
  * @return A FullHttpResponse object.
  */
 @JvmOverloads
 fun httpFileStream(
     stream: InputStream,
-    contentType: String? = null
+    contentType: String? = null,
+    contentLength: Int = 256,
 ): FullHttpResponse {
+    require(contentLength > 0) { "content length must be positive" }
+
     val allocator = PooledByteBufAllocator.DEFAULT
-    val buf = allocator.buffer()
+    val buf = allocator.buffer(contentLength)
 
     try {
         stream.use {
