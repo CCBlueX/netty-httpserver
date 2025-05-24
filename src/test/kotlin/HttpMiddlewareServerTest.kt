@@ -7,9 +7,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import org.junit.jupiter.api.*
-import java.io.File
-import java.nio.file.Files
-import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -21,7 +18,7 @@ import kotlin.test.assertTrue
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class HttpMiddlewareServerTest {
 
-    private lateinit var serverThread: Thread
+    private lateinit var server: HttpServer
     private val client = OkHttpClient()
 
     /**
@@ -32,9 +29,7 @@ class HttpMiddlewareServerTest {
     @BeforeAll
     fun initialize() {
         // Start the HTTP server in a separate thread
-        serverThread = thread {
-            startHttpServer()
-        }
+        server = startHttpServer()
 
         // Allow the server some time to start
         Thread.sleep(1000)
@@ -46,14 +41,14 @@ class HttpMiddlewareServerTest {
      */
     @AfterAll
     fun cleanup() {
-        serverThread.interrupt()
+        server.stop()
     }
 
     /**
      * This function starts the HTTP server with routing configured for
      * different difficulty levels.
      */
-    private fun startHttpServer() {
+    private fun startHttpServer(): HttpServer {
         val server = HttpServer()
 
         server.routeController.apply {
@@ -74,6 +69,7 @@ class HttpMiddlewareServerTest {
         }
 
         server.start(8080)  // Start the server on port 8080
+        return server
     }
 
     @Suppress("UNUSED_PARAMETER")
