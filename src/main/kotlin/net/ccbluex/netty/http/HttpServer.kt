@@ -61,7 +61,7 @@ class HttpServer {
         internal val logger = LogManager.getLogger("HttpServer")
     }
 
-    fun middleware(middleware: Middleware) {
+    fun middleware(middleware: Middleware) = apply {
         middlewares += middleware
     }
 
