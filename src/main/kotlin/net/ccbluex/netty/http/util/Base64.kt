@@ -19,18 +19,27 @@
  */
 package net.ccbluex.netty.http.util
 
+import io.netty.buffer.Unpooled
+import io.netty.handler.codec.base64.Base64
+import java.nio.channels.FileChannel
+import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
-import kotlin.io.path.readBytes
 
 /**
  * Reads the image at the given [path] and returns it as a base64 encoded string.
  */
-fun readImageAsBase64(path: Path): String = path.readBytes().encodeBase64()
+@Deprecated(
+    "Use Path.readAsBase64() instead",
+    ReplaceWith("path.readAsBase64()")
+)
+fun readImageAsBase64(path: Path): String = path.readAsBase64()
 
 /**
- * Encodes the byte array to a base64 encoded string.
+ * Reads the file and returns it as a base64 encoded string.
  */
-@OptIn(ExperimentalEncodingApi::class)
-private fun ByteArray.encodeBase64() = Base64.encode(this)
+fun Path.readAsBase64(): String {
+    return FileChannel.open(this).use { channel ->
+        val byteBuffer = channel.map(FileChannel.MapMode.READ_ONLY, 0, Files.size(this))
+        Base64.encode(Unpooled.wrappedBuffer(byteBuffer), false)
+    }.toString(Charsets.UTF_8)
+}

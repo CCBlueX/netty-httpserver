@@ -7,8 +7,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import org.junit.jupiter.api.*
-import java.io.File
-import java.nio.file.Files
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

@@ -73,15 +73,21 @@ internal sealed interface TransportType {
     }
 
     companion object {
+        private val available by lazy {
+            arrayOf(Epoll, KQueue, Nio).first { it.isAvailable }
+        }
+
         /**
-         * @return Parent and child group
+         * Set the channel factory and event loop groups for the given server bootstrap.
+         *
+         * @param bootstrap The server bootstrap to configure.
+         * @return Parent and child group.
          */
         fun apply(bootstrap: ServerBootstrap): Pair<EventLoopGroup, EventLoopGroup> {
-            val transportType = arrayOf(Epoll, KQueue, Nio).first { it.isAvailable }
-            val parentGroup = transportType.newParentGroup()
-            val childGroup = transportType.newChildGroup()
+            val parentGroup = available.newParentGroup()
+            val childGroup = available.newChildGroup()
             bootstrap.group(parentGroup, childGroup)
-                .channelFactory(transportType::newServerChannel)
+                .channelFactory(available::newServerChannel)
             return parentGroup to childGroup
         }
     }
