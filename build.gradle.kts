@@ -33,8 +33,6 @@ dependencies {
     implementation("org.apache.logging.log4j:log4j-core:2.23.1")
     // https://mvnrepository.com/artifact/io.netty/netty-codec-http
     implementation("io.netty:netty-codec-http:$nettyVersion")
-    // https://mvnrepository.com/artifact/io.netty/netty-transport-classes-epoll
-    implementation("io.netty:netty-transport-classes-epoll:$nettyVersion")
     // https://mvnrepository.com/artifact/com.google.code.gson/gson
     implementation("com.google.code.gson:gson:2.10.1")
     // https://mvnrepository.com/artifact/org.apache.tika/tika-core

@@ -21,9 +21,6 @@ package net.ccbluex.netty.http
 
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelOption
-import io.netty.channel.epoll.Epoll
-import io.netty.channel.epoll.EpollEventLoopGroup
-import io.netty.channel.epoll.EpollServerSocketChannel
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.handler.logging.LogLevel
@@ -58,15 +55,15 @@ class HttpServer {
      * Starts the Netty server on the specified port.
      */
     fun start(port: Int) {
-        val bossGroup = if (Epoll.isAvailable()) EpollEventLoopGroup() else NioEventLoopGroup()
-        val workerGroup = if (Epoll.isAvailable()) EpollEventLoopGroup() else NioEventLoopGroup()
+        val bossGroup = NioEventLoopGroup(1)
+        val workerGroup = NioEventLoopGroup()
 
         try {
             logger.info("Starting Netty server...")
             val b = ServerBootstrap()
             b.option(ChannelOption.SO_BACKLOG, 1024)
             b.group(bossGroup, workerGroup)
-                .channel(if (Epoll.isAvailable()) EpollServerSocketChannel::class.java else NioServerSocketChannel::class.java)
+                .channelFactory { NioServerSocketChannel() }
                 .handler(LoggingHandler(LogLevel.INFO))
                 .childHandler(HttpChannelInitializer(this))
             val ch = b.bind(port).sync().channel()
