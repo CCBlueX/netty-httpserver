@@ -26,7 +26,7 @@ kotlin {
     jvmToolchain(21)
 }
 
-val nettyVersion = "4.1.97.Final"
+val nettyVersion = "4.1.115.Final"
 
 dependencies {
     // https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core
