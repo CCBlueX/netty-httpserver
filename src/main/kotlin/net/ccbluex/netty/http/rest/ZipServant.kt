@@ -111,51 +111,74 @@ class ZipServant(part: String, zipInputStream: InputStream) : Node(part) {
 
     override fun handleRequest(requestObject: RequestObject): FullHttpResponse {
         val path = requestObject.remainingPath.removePrefix("/")
-        val sanitizedPath = path.replace("..", "")
+        val cleanPath = path.substringBefore("#").substringBefore("?")
+        val sanitizedPath = cleanPath.replace("..", "")
 
-        return when {
-            zipFiles.containsKey(sanitizedPath) -> {
-                val entry = zipFiles[sanitizedPath]!!
-
-                when {
-                    entry.isDirectory -> {
-                        // Try to serve index.html from the directory
-                        val indexPath = if (sanitizedPath.isEmpty()) "index.html" else "$sanitizedPath/index.html"
-                        val indexEntry = zipFiles[indexPath]
-
-                        if (indexEntry != null && !indexEntry.isDirectory) {
-                            httpFileStream(
-                                stream = ByteArrayInputStream(indexEntry.data),
-                                contentLength = indexEntry.data.size
-                            )
-                        } else {
-                            httpForbidden("Directory listing not allowed")
-                        }
-                    }
-                    else -> {
-                        httpFileStream(
-                            stream = ByteArrayInputStream(entry.data),
-                            contentLength = entry.data.size
-                        )
-                    }
-                }
-            }
-            // Try exact match first, then try as directory
-            zipFiles.keys.any { it.startsWith("$sanitizedPath/") } -> {
-                // This is a directory path without trailing slash
-                val indexPath = if (sanitizedPath.isEmpty()) "index.html" else "$sanitizedPath/index.html"
-                val indexEntry = zipFiles[indexPath]
-
-                if (indexEntry != null && !indexEntry.isDirectory) {
-                    httpFileStream(
-                        stream = ByteArrayInputStream(indexEntry.data),
-                        contentLength = indexEntry.data.size
-                    )
-                } else {
-                    httpForbidden("Directory listing not allowed")
-                }
-            }
-            else -> httpNotFound(sanitizedPath, "File not found in zip archive")
+        fun findFile(targetPath: String): ZipFileEntry? {
+            return zipFiles[targetPath]
+                ?: zipFiles["./$targetPath"]
+                ?: zipFiles["/$targetPath"]
         }
+
+        fun isImplicitDirectory(targetPath: String): Boolean {
+            val pathPrefix = if (targetPath.isEmpty()) "" else "$targetPath/"
+            return zipFiles.keys.any { key ->
+                key.startsWith(pathPrefix) && key != targetPath && !key.removePrefix(pathPrefix).contains("/")
+            }
+        }
+
+        if (sanitizedPath.isEmpty() || path.contains("#")) {
+            val indexEntry = findFile("index.html")
+            if (indexEntry != null && !indexEntry.isDirectory) {
+                return httpFileStream(
+                    stream = ByteArrayInputStream(indexEntry.data),
+                    contentLength = indexEntry.data.size
+                )
+            }
+        }
+
+        val exactMatch = findFile(sanitizedPath)
+        if (exactMatch != null) {
+            return when {
+                exactMatch.isDirectory -> {
+                    // This is an explicit directory entry, try to serve index.html from it
+                    val indexPath = if (sanitizedPath.isEmpty()) "index.html" else "$sanitizedPath/index.html"
+                    val indexEntry = findFile(indexPath)
+
+                    if (indexEntry != null && !indexEntry.isDirectory) {
+                        httpFileStream(
+                            stream = ByteArrayInputStream(indexEntry.data),
+                            contentLength = indexEntry.data.size
+                        )
+                    } else {
+                        httpForbidden("Directory listing not allowed")
+                    }
+                }
+                else -> {
+                    // Regular file
+                    httpFileStream(
+                        stream = ByteArrayInputStream(exactMatch.data),
+                        contentLength = exactMatch.data.size
+                    )
+                }
+            }
+        }
+
+        // Check if this could be an implicit directory (has files under it)
+        if (isImplicitDirectory(sanitizedPath)) {
+            val indexPath = if (sanitizedPath.isEmpty()) "index.html" else "$sanitizedPath/index.html"
+            val indexEntry = findFile(indexPath)
+
+            return if (indexEntry != null && !indexEntry.isDirectory) {
+                httpFileStream(
+                    stream = ByteArrayInputStream(indexEntry.data),
+                    contentLength = indexEntry.data.size
+                )
+            } else {
+                httpForbidden("Directory listing not allowed")
+            }
+        }
+
+        return httpNotFound(sanitizedPath, "File not found in zip archive")
     }
 }
