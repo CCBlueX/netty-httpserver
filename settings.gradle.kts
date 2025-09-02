@@ -6,3 +6,4 @@ rootProject.name = "netty-httpserver"
 include(":examples:hello-world")
 include(":examples:echo-server")
 include(":examples:file-server")
+include(":examples:zip-server")
