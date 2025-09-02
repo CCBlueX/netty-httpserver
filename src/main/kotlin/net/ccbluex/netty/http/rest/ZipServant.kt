@@ -21,9 +21,9 @@ package net.ccbluex.netty.http.rest
 
 import io.netty.handler.codec.http.FullHttpResponse
 import net.ccbluex.netty.http.util.httpFileStream
-import net.ccbluex.netty.http.util.httpForbidden
 import net.ccbluex.netty.http.util.httpNotFound
 import net.ccbluex.netty.http.model.RequestObject
+import org.apache.tika.Tika
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.util.zip.ZipEntry
@@ -73,6 +73,7 @@ class ZipServant(part: String, zipInputStream: InputStream) : Node(part) {
     }
 
     private val zipFiles: Map<String, ZipFileEntry>
+    private val tika = Tika()
 
     init {
         zipFiles = loadZipData(zipInputStream)
@@ -111,71 +112,90 @@ class ZipServant(part: String, zipInputStream: InputStream) : Node(part) {
 
     override fun handleRequest(requestObject: RequestObject): FullHttpResponse {
         val path = requestObject.remainingPath.removePrefix("/")
-        val cleanPath = path.substringBefore("#").substringBefore("?")
+        val cleanPath = path.substringBefore("?")
         val sanitizedPath = cleanPath.replace("..", "")
 
-        fun findFile(targetPath: String): ZipFileEntry? {
-            return zipFiles[targetPath]
-                ?: zipFiles["./$targetPath"]
-                ?: zipFiles["/$targetPath"]
-        }
+        fun findFile(targetPath: String) =
+            zipFiles[targetPath] ?: zipFiles["./$targetPath"] ?: zipFiles["/$targetPath"]
 
         fun isImplicitDirectory(targetPath: String): Boolean {
             val pathPrefix = if (targetPath.isEmpty()) "" else "$targetPath/"
             return zipFiles.keys.any { key ->
-                key.startsWith(pathPrefix) && key != targetPath && !key.removePrefix(pathPrefix).contains("/")
+                key.startsWith(pathPrefix) && key != targetPath
             }
         }
 
-        if (sanitizedPath.isEmpty() || path.contains("#")) {
-            val indexEntry = findFile("index.html")
-            if (indexEntry != null && !indexEntry.isDirectory) {
-                return httpFileStream(
-                    stream = ByteArrayInputStream(indexEntry.data),
-                    contentLength = indexEntry.data.size
-                )
-            }
+        fun findIndexInDirectory(dirPath: String): ZipFileEntry? {
+            val indexPath = if (dirPath.isEmpty()) "index.html" else "$dirPath/index.html"
+            return findFile(indexPath)
         }
 
+        // Extract directory path from fragments (e.g., "test/#/" -> "test")
+        val fragmentIndex = sanitizedPath.indexOf("#")
+        val directoryPath = if (fragmentIndex != -1) {
+            sanitizedPath.take(fragmentIndex).removeSuffix("/")
+        } else {
+            sanitizedPath.removeSuffix("/")
+        }
+
+        // Try to find exact file match first (non-directory)
         val exactMatch = findFile(sanitizedPath)
-        if (exactMatch != null) {
-            return when {
-                exactMatch.isDirectory -> {
-                    // This is an explicit directory entry, try to serve index.html from it
-                    val indexPath = if (sanitizedPath.isEmpty()) "index.html" else "$sanitizedPath/index.html"
-                    val indexEntry = findFile(indexPath)
+        if (exactMatch != null && !exactMatch.isDirectory) {
+            return httpFileStream(
+                stream = ByteArrayInputStream(exactMatch.data),
+                contentType = tika.detect(exactMatch.name),
+                contentLength = exactMatch.data.size
+            )
+        }
 
-                    if (indexEntry != null && !indexEntry.isDirectory) {
-                        httpFileStream(
-                            stream = ByteArrayInputStream(indexEntry.data),
-                            contentLength = indexEntry.data.size
-                        )
-                    } else {
-                        httpForbidden("Directory listing not allowed")
-                    }
-                }
-                else -> {
-                    // Regular file
-                    httpFileStream(
-                        stream = ByteArrayInputStream(exactMatch.data),
-                        contentLength = exactMatch.data.size
+        // Handle directory requests or SPA routes
+        when {
+            // Case 1: Empty path (root) - serve root index.html
+            sanitizedPath.isEmpty() -> {
+                val indexEntry = findIndexInDirectory("")
+                if (indexEntry != null && !indexEntry.isDirectory) {
+                    return httpFileStream(
+                        stream = ByteArrayInputStream(indexEntry.data),
+                        contentType = tika.detect(indexEntry.name),
+                        contentLength = indexEntry.data.size
                     )
                 }
             }
-        }
 
-        // Check if this could be an implicit directory (has files under it)
-        if (isImplicitDirectory(sanitizedPath)) {
-            val indexPath = if (sanitizedPath.isEmpty()) "index.html" else "$sanitizedPath/index.html"
-            val indexEntry = findFile(indexPath)
+            // Case 2: Path ends with "/" - explicit directory request
+            sanitizedPath.endsWith("/") -> {
+                val indexEntry = findIndexInDirectory(directoryPath)
+                if (indexEntry != null && !indexEntry.isDirectory) {
+                    return httpFileStream(
+                        stream = ByteArrayInputStream(indexEntry.data),
+                        contentType = tika.detect(indexEntry.name),
+                        contentLength = indexEntry.data.size
+                    )
+                }
+            }
 
-            return if (indexEntry != null && !indexEntry.isDirectory) {
-                httpFileStream(
-                    stream = ByteArrayInputStream(indexEntry.data),
-                    contentLength = indexEntry.data.size
-                )
-            } else {
-                httpForbidden("Directory listing not allowed")
+            // Case 3: Path contains "#" - SPA route with fragment
+            fragmentIndex != -1 -> {
+                val indexEntry = findIndexInDirectory(directoryPath)
+                if (indexEntry != null && !indexEntry.isDirectory) {
+                    return httpFileStream(
+                        stream = ByteArrayInputStream(indexEntry.data),
+                        contentType = tika.detect(indexEntry.name),
+                        contentLength = indexEntry.data.size
+                    )
+                }
+            }
+
+            // Case 4: Check if path is an implicit directory and has index.html
+            isImplicitDirectory(sanitizedPath) -> {
+                val indexEntry = findIndexInDirectory(sanitizedPath)
+                if (indexEntry != null && !indexEntry.isDirectory) {
+                    return httpFileStream(
+                        stream = ByteArrayInputStream(indexEntry.data),
+                        contentType = tika.detect(indexEntry.name),
+                        contentLength = indexEntry.data.size
+                    )
+                }
             }
         }
 
