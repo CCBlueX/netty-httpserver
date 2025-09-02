@@ -19,6 +19,7 @@
  */
 package net.ccbluex.netty.http.util
 
+import com.google.gson.Gson
 import com.google.gson.JsonElement
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.PooledByteBufAllocator
@@ -77,12 +78,14 @@ fun httpResponse(
  *
  * @param status The HTTP response status.
  * @param json The JSON content of the response.
+ * @param gson The Gson instance to serialize the body.
  * @return A FullHttpResponse object.
  */
-fun httpResponse(status: HttpResponseStatus, json: JsonElement) = httpResponse(
+@JvmOverloads
+fun httpResponse(status: HttpResponseStatus, json: JsonElement, gson: Gson = DEFAULT_GSON) = httpResponse(
     status,
     "application/json",
-    PooledByteBufAllocator.DEFAULT.writeJson(json)
+    PooledByteBufAllocator.DEFAULT.writeJson(json, gson)
 )
 
 /**
@@ -90,9 +93,11 @@ fun httpResponse(status: HttpResponseStatus, json: JsonElement) = httpResponse(
  *
  * @param status The HTTP response status.
  * @param json The JSON content of the response.
+ * @param gson The Gson instance to serialize the body.
  * @return A FullHttpResponse object.
  */
-fun <T : Any> httpResponse(status: HttpResponseStatus, json: T) = httpResponse(
+@JvmOverloads
+fun <T : Any> httpResponse(status: HttpResponseStatus, json: T, gson: Gson = DEFAULT_GSON) = httpResponse(
     status,
     "application/json",
     PooledByteBufAllocator.DEFAULT.writeJson(json, json.javaClass)
@@ -104,7 +109,20 @@ fun <T : Any> httpResponse(status: HttpResponseStatus, json: T) = httpResponse(
  * @param jsonElement The JSON content of the response.
  * @return A FullHttpResponse object.
  */
-fun httpOk(jsonElement: JsonElement) = httpResponse(HttpResponseStatus.OK, jsonElement)
+@JvmOverloads
+fun httpOk(jsonElement: JsonElement, gson: Gson = DEFAULT_GSON) =
+    httpResponse(HttpResponseStatus.OK, jsonElement, gson)
+
+/**
+ * Creates an HTTP 200 OK response with the given JSON content.
+ *
+ * @param json The JSON content of the response.
+ * @param gson The Gson instance to serialize the body.
+ * @return A FullHttpResponse object.
+ */
+@JvmOverloads
+fun <T : Any> httpOk(json: T, gson: Gson = DEFAULT_GSON) =
+    httpResponse(HttpResponseStatus.OK, json, gson)
 
 /**
  * Creates an HTTP 404 Not Found response with the given path and reason.

@@ -28,50 +28,45 @@ import net.ccbluex.netty.http.util.httpNotFound
 import net.ccbluex.netty.http.model.RequestObject
 import net.ccbluex.netty.http.util.httpNoContent
 
-internal class HttpConductor(private val server: HttpServer) {
+/**
+ * Processes the incoming request context and returns the response.
+ *
+ * @param context The request context to process.
+ * @return The response to the request.
+ */
+internal fun HttpServer.processRequestContext(context: RequestContext) = runCatching {
+    val content = context.contentBuffer.toString()
+    val method = context.httpMethod
 
-    /**
-     * Processes the incoming request context and returns the response.
-     *
-     * @param context The request context to process.
-     * @return The response to the request.
-     */
-    fun processRequestContext(context: RequestContext) = runCatching {
-        val content = context.contentBuffer.toString()
-        val method = context.httpMethod
+    logger.debug("Request {}", context)
 
-        logger.debug("Request {}", context)
-
-        if (!context.headers["content-length"].isNullOrEmpty() &&
-            context.headers["content-length"]?.toInt() != content.toByteArray(Charsets.UTF_8).size) {
-            logger.warn("Received incomplete request: $context")
-            return@runCatching httpBadRequest("Incomplete request")
-        }
-
-        val (node, params, remaining) = server.routeController.processPath(context.path, method) ?:
-            return@runCatching httpNotFound(context.path, "Route not found")
-
-        if (method == HttpMethod.OPTIONS) {
-            return@runCatching httpNoContent()
-        }
-
-        logger.debug("Found destination {}", node)
-        val requestObject = RequestObject(
-            uri = context.uri,
-            path = context.path,
-            remainingPath = remaining,
-            method = method,
-            body = content,
-            params = params,
-            queryParams = context.params,
-            headers = context.headers
-        )
-
-        return@runCatching node.handleRequest(requestObject)
-    }.getOrElse {
-        logger.error("Error while processing request object: $context", it)
-        httpInternalServerError(it.message ?: "Unknown error")
+    if (!context.headers["content-length"].isNullOrEmpty() &&
+        context.headers["content-length"]?.toInt() != content.toByteArray(Charsets.UTF_8).size) {
+        logger.warn("Received incomplete request: $context")
+        return@runCatching httpBadRequest("Incomplete request")
     }
 
+    val (node, params, remaining) = routeController.processPath(context.path, method) ?:
+        return@runCatching httpNotFound(context.path, "Route not found")
 
+    if (method == HttpMethod.OPTIONS) {
+        return@runCatching httpNoContent()
+    }
+
+    logger.debug("Found destination {}", node)
+    val requestObject = RequestObject(
+        uri = context.uri,
+        path = context.path,
+        remainingPath = remaining,
+        method = method,
+        body = content,
+        params = params,
+        queryParams = context.params,
+        headers = context.headers
+    )
+
+    return@runCatching node.handleRequest(requestObject)
+}.getOrElse {
+    logger.error("Error while processing request object: $context", it)
+    httpInternalServerError(it.message ?: "Unknown error")
 }

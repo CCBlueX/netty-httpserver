@@ -20,7 +20,7 @@
 package net.ccbluex.netty.http.model
 
 import io.netty.handler.codec.http.HttpMethod
-import net.ccbluex.netty.http.util.gson
+import net.ccbluex.netty.http.util.DEFAULT_GSON
 
 /**
  * Represents an HTTP request object.
@@ -56,7 +56,7 @@ data class RequestObject(
 
     companion object {
         @JvmField
-        val GSON_INSTANCE = gson
+        val GSON_INSTANCE = DEFAULT_GSON
     }
 
 }

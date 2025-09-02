@@ -23,15 +23,11 @@ import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.Channel
 import io.netty.channel.ChannelOption
 import io.netty.channel.EventLoopGroup
-import io.netty.channel.epoll.Epoll
-import io.netty.channel.epoll.EpollEventLoopGroup
-import io.netty.channel.epoll.EpollServerSocketChannel
-import io.netty.channel.nio.NioEventLoopGroup
-import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.handler.logging.LogLevel
 import io.netty.handler.logging.LoggingHandler
 import net.ccbluex.netty.http.middleware.Middleware
 import net.ccbluex.netty.http.rest.RouteController
+import net.ccbluex.netty.http.util.TransportType
 import net.ccbluex.netty.http.websocket.WebSocketController
 import org.apache.logging.log4j.LogManager
 import java.net.InetSocketAddress
@@ -73,15 +69,15 @@ class HttpServer {
      * @return actual port of server.
      */
     fun start(port: Int): Int = lock.withLock {
-        bossGroup = if (Epoll.isAvailable()) EpollEventLoopGroup(1) else NioEventLoopGroup(1)
-        workerGroup = if (Epoll.isAvailable()) EpollEventLoopGroup() else NioEventLoopGroup()
+        val b = ServerBootstrap()
+
+        val groups = TransportType.apply(b)
+        bossGroup = groups.first
+        workerGroup = groups.second
 
         try {
             logger.info("Starting Netty server...")
-            val b = ServerBootstrap()
             b.option(ChannelOption.SO_BACKLOG, 1024)
-            b.group(bossGroup, workerGroup)
-                .channel(if (Epoll.isAvailable()) EpollServerSocketChannel::class.java else NioServerSocketChannel::class.java)
                 .handler(LoggingHandler(LogLevel.INFO))
                 .childHandler(HttpChannelInitializer(this))
             val ch = b.bind(port).sync().channel()

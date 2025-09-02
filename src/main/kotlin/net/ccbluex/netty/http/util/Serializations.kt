@@ -25,18 +25,19 @@ import io.netty.buffer.ByteBuf
 import io.netty.buffer.ByteBufAllocator
 import java.lang.reflect.Type
 
-internal val gson = Gson()
+internal val DEFAULT_GSON = Gson()
 
 /**
  * Serialize [json] into [ByteBuf] with given [ByteBufAllocator].
  */
+@JvmOverloads
 fun ByteBufAllocator.writeJson(
     json: JsonElement,
+    gson: Gson = DEFAULT_GSON,
 ): ByteBuf {
     val buf = buffer(256, Int.MAX_VALUE)
-    gson.newJsonWriter(buf.outputStream().writer(Charsets.UTF_8)).use { writer ->
-        gson.toJson(json, writer)
-        writer.flush()
+    buf.outputStream().writer(Charsets.UTF_8).use {
+        gson.toJson(json, it)
     }
     return buf
 }
@@ -48,11 +49,11 @@ fun ByteBufAllocator.writeJson(
 fun <T : Any> ByteBufAllocator.writeJson(
     obj: T,
     type: Type = obj.javaClass,
+    gson: Gson = DEFAULT_GSON,
 ): ByteBuf {
     val buf = buffer(256, Int.MAX_VALUE)
-    gson.newJsonWriter(buf.outputStream().writer(Charsets.UTF_8)).use { writer ->
-        gson.toJson(obj, type, writer)
-        writer.flush()
+    buf.outputStream().writer(Charsets.UTF_8).use {
+        gson.toJson(obj, type, it)
     }
     return buf
 }
