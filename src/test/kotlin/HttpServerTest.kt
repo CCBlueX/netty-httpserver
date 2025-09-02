@@ -90,7 +90,8 @@ class HttpServerTest {
             get("/api/v1/s", ::static)
 
             get("/", ::static)
-            file("/", folder)
+            file("/abc", folder)
+            file("/def/abc", folder)
         }
 
         server.start(8080)  // Start the server on port 8080
@@ -300,10 +301,15 @@ class HttpServerTest {
 
     @Test
     fun testFileEndpoint() {
+        testFileEndpoint("/abc")
+        testFileEndpoint("/def/abc")
+    }
+
+    fun testFileEndpoint(prefix: String) {
         val files = folder.list() ?: emptyArray()
 
         files.forEach { file ->
-            val response = makeRequest("/$file")
+            val response = makeRequest("$prefix/$file")
             assertEquals(200, response.code(), "Expected status code 200 for $file")
 
             val responseBody = response.body()?.string()
