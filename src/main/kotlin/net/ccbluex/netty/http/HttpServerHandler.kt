@@ -109,8 +109,7 @@ internal class HttpServerHandler(private val server: HttpServer) : ChannelInboun
                 if (msg is LastHttpContent) {
                     localRequestContext.remove()
 
-                    val httpConductor = HttpConductor(server)
-                    val response = httpConductor.processRequestContext(requestContext)
+                    val response = server.processRequestContext(requestContext)
                     val httpResponse = server.middlewares.fold(response) { acc, f -> f(requestContext, acc) }
                     ctx.writeAndFlush(httpResponse)
                 }

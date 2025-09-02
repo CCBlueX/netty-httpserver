@@ -71,7 +71,9 @@ class HttpServer {
     fun start(port: Int): Int = lock.withLock {
         val b = ServerBootstrap()
 
-        val (bossGroup, workerGroup) = TransportType.apply(b)
+        val groups = TransportType.apply(b)
+        bossGroup = groups.first
+        workerGroup = groups.second
 
         try {
             logger.info("Starting Netty server...")
