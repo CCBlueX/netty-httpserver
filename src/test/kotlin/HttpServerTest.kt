@@ -9,7 +9,6 @@ import okhttp3.Response
 import org.junit.jupiter.api.*
 import java.io.File
 import java.nio.file.Files
-import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -22,7 +21,7 @@ import kotlin.test.assertTrue
 class HttpServerTest {
 
     private lateinit var folder: File
-    private lateinit var serverThread: Thread
+    private lateinit var server: HttpServer
     private val client = OkHttpClient()
 
     /**
@@ -44,9 +43,7 @@ class HttpServerTest {
         File(subFolder, "index.html").writeText("Hello, World!")
 
         // Start the HTTP server in a separate thread
-        serverThread = thread {
-            startHttpServer(folder)
-        }
+        server = startHttpServer(folder)
 
         // Allow the server some time to start
         Thread.sleep(1000)
@@ -58,7 +55,7 @@ class HttpServerTest {
      */
     @AfterAll
     fun cleanup() {
-        serverThread.interrupt()
+        server.stop()
         folder.deleteRecursively() // Clean up the temporary folder
     }
 
@@ -66,7 +63,7 @@ class HttpServerTest {
      * This function starts the HTTP server with routing configured for
      * different difficulty levels.
      */
-    private fun startHttpServer(folder: File) {
+    private fun startHttpServer(folder: File): HttpServer {
         val server = HttpServer()
 
         server.routeController.apply {
@@ -93,10 +90,12 @@ class HttpServerTest {
             get("/api/v1/s", ::static)
 
             get("/", ::static)
-            file("/", folder)
+            file("/abc", folder)
+            file("/def/abc", folder)
         }
 
         server.start(8080)  // Start the server on port 8080
+        return server
     }
 
     @Suppress("UNUSED_PARAMETER")
@@ -302,10 +301,15 @@ class HttpServerTest {
 
     @Test
     fun testFileEndpoint() {
+        testFileEndpoint("/abc")
+        testFileEndpoint("/def/abc")
+    }
+
+    fun testFileEndpoint(prefix: String) {
         val files = folder.list() ?: emptyArray()
 
         files.forEach { file ->
-            val response = makeRequest("/$file")
+            val response = makeRequest("$prefix/$file")
             assertEquals(200, response.code(), "Expected status code 200 for $file")
 
             val responseBody = response.body()?.string()

@@ -11,7 +11,7 @@ val authorName = "ccbluex"
 val projectUrl = "https://github.com/ccbluex/netty-httpserver"
 
 group = "net.ccbluex"
-version = "2.2.1"
+version = "2.2.2"
 
 repositories {
     mavenCentral()
@@ -30,7 +30,7 @@ dependencies {
     // https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core
     implementation("org.apache.logging.log4j:log4j-core:2.23.1")
     // https://mvnrepository.com/artifact/io.netty/netty-all
-    implementation("io.netty:netty-all:4.1.97.Final")
+    implementation("io.netty:netty-all:4.1.115.Final")
     // https://mvnrepository.com/artifact/com.google.code.gson/gson
     implementation("com.google.code.gson:gson:2.10.1")
     // https://mvnrepository.com/artifact/org.apache.tika/tika-core

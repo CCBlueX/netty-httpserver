@@ -20,7 +20,9 @@
 package net.ccbluex.netty.http
 
 import io.netty.bootstrap.ServerBootstrap
+import io.netty.channel.Channel
 import io.netty.channel.ChannelOption
+import io.netty.channel.EventLoopGroup
 import io.netty.handler.logging.LogLevel
 import io.netty.handler.logging.LoggingHandler
 import net.ccbluex.netty.http.middleware.Middleware
@@ -28,6 +30,9 @@ import net.ccbluex.netty.http.rest.RouteController
 import net.ccbluex.netty.http.util.TransportType
 import net.ccbluex.netty.http.websocket.WebSocketController
 import org.apache.logging.log4j.LogManager
+import java.net.InetSocketAddress
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 
 /**
@@ -40,20 +45,30 @@ class HttpServer {
     val routeController = RouteController()
     val webSocketController = WebSocketController()
 
-    val middlewares = mutableListOf<Middleware>()
+    private val lock = ReentrantLock()
+
+    internal val middlewares = mutableListOf<Middleware>()
+
+    private var bossGroup: EventLoopGroup? = null
+    private var workerGroup: EventLoopGroup? = null
+    private var serverChannel: Channel? = null
 
     companion object {
         internal val logger = LogManager.getLogger("HttpServer")
     }
 
-    fun middleware(middleware: Middleware) {
+    fun middleware(middleware: Middleware) = apply {
         middlewares += middleware
     }
 
     /**
      * Starts the Netty server on the specified port.
+     *
+     * @param port The port of HTTP server. `0` means to auto select one.
+     *
+     * @return actual port of server.
      */
-    fun start(port: Int) {
+    fun start(port: Int): Int = lock.withLock {
         val b = ServerBootstrap()
 
         val (bossGroup, workerGroup) = TransportType.apply(b)
@@ -64,21 +79,35 @@ class HttpServer {
                 .handler(LoggingHandler(LogLevel.INFO))
                 .childHandler(HttpChannelInitializer(this))
             val ch = b.bind(port).sync().channel()
+            serverChannel = ch
 
             logger.info("Netty server started on port $port.")
-            ch.closeFuture().sync()
-        } catch (e: InterruptedException) {
-            logger.error("Netty server interrupted", e)
+
+            return@withLock (ch.localAddress() as InetSocketAddress).port
         } catch (t: Throwable) {
             logger.error("Netty server failed - $port", t)
-
+            stop()
             // Forward the exception because we ran into an unexpected error
             throw t
-        } finally {
-            bossGroup.shutdownGracefully()
-            workerGroup.shutdownGracefully()
         }
+    }
 
+    /**
+     * Stops the Netty server gracefully.
+     */
+    fun stop() = lock.withLock {
+        logger.info("Shutting down Netty server...")
+        try {
+            serverChannel?.close()?.sync()
+            bossGroup?.shutdownGracefully()?.sync()
+            workerGroup?.shutdownGracefully()?.sync()
+        } catch (e: Exception) {
+            logger.warn("Error during shutdown", e)
+        } finally {
+            serverChannel = null
+            bossGroup = null
+            workerGroup = null
+        }
         logger.info("Netty server stopped.")
     }
 

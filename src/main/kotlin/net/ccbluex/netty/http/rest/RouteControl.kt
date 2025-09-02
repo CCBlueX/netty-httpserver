@@ -96,7 +96,10 @@ class RouteController : Node("") {
         }
 
         return if (currentNode.matchesMethod(method)) {
-            Destination(currentNode, params, pathArray.joinToString("/"))
+            // remainingPath should only include the unmatched trailing segments,
+            // not the already matched route path
+            val remaining = if (index >= pathArray.size) "" else pathArray.copyOfRange(index, pathArray.size).joinToString("/")
+            Destination(currentNode, params, remaining)
         } else {
             null
         }
