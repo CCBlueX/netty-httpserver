@@ -16,7 +16,7 @@ repositories {
 }
 
 dependencies {
-    implementation("net.ccbluex:netty-httpserver:2.2.0")
+    implementation("net.ccbluex:netty-httpserver:2.3.0")
 }
 ```
 
@@ -86,6 +86,7 @@ You can find additional examples in the `/examples` folder of the repository. Th
 1. **Hello World Example**: A basic server that responds with "Hello, World!".
 2. **Echo Server**: A server that echoes back any JSON data sent to it.
 3. **File Server**: A server that serves files from a specified directory.
+4. **Zip Server**: A server that serves files from a in-memory ZIP archive.
 
 ### Running the Examples
 
