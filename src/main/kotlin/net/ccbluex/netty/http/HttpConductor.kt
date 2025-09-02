@@ -34,7 +34,7 @@ import net.ccbluex.netty.http.util.httpNoContent
  * @param context The request context to process.
  * @return The response to the request.
  */
-fun HttpServer.processRequestContext(context: RequestContext) = runCatching {
+internal fun HttpServer.processRequestContext(context: RequestContext) = runCatching {
     val content = context.contentBuffer.toString()
     val method = context.httpMethod
 
