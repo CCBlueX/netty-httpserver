@@ -46,8 +46,6 @@ class HttpServer {
     val routeController = RouteController()
     val webSocketController = WebSocketController()
 
-    private val lock = ReentrantLock()
-
     internal val middlewares = mutableListOf<Middleware>()
 
     private var bossGroup: EventLoopGroup? = null
@@ -69,7 +67,7 @@ class HttpServer {
      *
      * @return actual port of server.
      */
-    fun start(port: Int): Int = lock.withLock {
+    fun start(port: Int = 0): Int {
         val b = ServerBootstrap()
 
         val groups = TransportType.apply(b)
@@ -86,7 +84,7 @@ class HttpServer {
 
             logger.info("Netty server started on port $port.")
 
-            return@withLock (ch.localAddress() as InetSocketAddress).port
+            return (ch.localAddress() as InetSocketAddress).port
         } catch (t: Throwable) {
             logger.error("Netty server failed - $port", t)
             stop()
@@ -99,20 +97,18 @@ class HttpServer {
      * Stops the Netty server gracefully.
      */
     fun stop() {
-        lock.withLock {
-            logger.info("Shutting down Netty server...")
-            try {
-                serverChannel?.close()?.sync()
-                bossGroup?.shutdownGracefully()?.sync()
-                workerGroup?.shutdownGracefully()?.sync()
-            } catch (e: Exception) {
-                logger.warn("Error during shutdown", e)
-            } finally {
-                serverChannel = null
-                bossGroup = null
-                workerGroup = null
-            }
+        logger.info("Shutting down Netty server...")
+        try {
+            serverChannel?.close()?.sync()
+            bossGroup?.shutdownGracefully()?.sync()
+            workerGroup?.shutdownGracefully()?.sync()
             logger.info("Netty server stopped.")
+        } catch (e: Exception) {
+            logger.warn("Error during shutdown", e)
+        } finally {
+            serverChannel = null
+            bossGroup = null
+            workerGroup = null
         }
     }
 
