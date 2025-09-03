@@ -22,15 +22,15 @@ package net.ccbluex.netty.http.rest
 import io.netty.buffer.Unpooled
 import io.netty.handler.codec.http.FullHttpResponse
 import io.netty.handler.codec.http.HttpResponseStatus
-import net.ccbluex.netty.http.util.httpFileStream
 import net.ccbluex.netty.http.util.httpNotFound
 import net.ccbluex.netty.http.model.RequestObject
 import net.ccbluex.netty.http.util.httpResponse
 import org.apache.tika.Tika
-import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
+
+private val EMPTY_BYTE_ARRAY = ByteArray(0)
 
 /**
  * Represents a zip servant in the routing tree that serves files from a zip archive kept in memory.
@@ -107,7 +107,7 @@ class ZipServant(part: String, zipInputStream: InputStream) : Node(part) {
                 val isDirectory = entry.isDirectory
 
                 if (isDirectory) {
-                    files[name] = ZipFileEntry(name, ByteArray(0), true)
+                    files[name] = ZipFileEntry(name, EMPTY_BYTE_ARRAY, true)
                 } else {
                     val data = zis.readBytes()
                     files[name] = ZipFileEntry(name, data, false)
@@ -152,11 +152,7 @@ class ZipServant(part: String, zipInputStream: InputStream) : Node(part) {
         // Try to find exact file match first (non-directory)
         val exactMatch = findFile(sanitizedPath)
         if (exactMatch != null && !exactMatch.isDirectory) {
-            return httpFileStream(
-                stream = ByteArrayInputStream(exactMatch.data),
-                contentType = tika.detect(exactMatch.name),
-                contentLength = exactMatch.data.size
-            )
+            return exactMatch.toHttpResponse()
         }
 
         // Handle directory requests or SPA routes

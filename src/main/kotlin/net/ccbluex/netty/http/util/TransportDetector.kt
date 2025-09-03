@@ -83,6 +83,7 @@ internal sealed interface TransportType {
          * @param bootstrap The server bootstrap to configure.
          * @return Parent and child group.
          */
+        @JvmStatic
         fun apply(bootstrap: ServerBootstrap): Pair<EventLoopGroup, EventLoopGroup> {
             val parentGroup = available.newParentGroup()
             val childGroup = available.newChildGroup()
