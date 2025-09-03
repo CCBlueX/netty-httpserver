@@ -36,7 +36,6 @@ import net.ccbluex.netty.http.util.httpNoContent
  */
 internal suspend fun HttpServer.processRequestContext(context: RequestContext) = runCatching {
     val contentBytes = context.contentBuffer.toByteArray()
-    val content = contentBytes.toString(Charsets.UTF_8)
     val method = context.httpMethod
 
     logger.debug("Request {}", context)
@@ -53,6 +52,8 @@ internal suspend fun HttpServer.processRequestContext(context: RequestContext) =
     if (method == HttpMethod.OPTIONS) {
         return@runCatching httpNoContent()
     }
+
+    val content = contentBytes.toString(Charsets.UTF_8)
 
     logger.debug("Found destination {}", node)
     val requestObject = RequestObject(
