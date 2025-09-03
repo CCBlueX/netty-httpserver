@@ -19,11 +19,8 @@
  */
 package net.ccbluex.netty.http.rest
 
-import io.netty.handler.codec.http.FullHttpResponse
 import io.netty.handler.codec.http.HttpMethod
-import net.ccbluex.netty.http.util.httpFile
-import net.ccbluex.netty.http.util.httpForbidden
-import net.ccbluex.netty.http.util.httpNotFound
+import net.ccbluex.netty.http.model.RequestHandler
 import net.ccbluex.netty.http.model.RequestObject
 import java.io.File
 
@@ -34,10 +31,10 @@ import java.io.File
  * @property method The HTTP method of the route.
  * @property handler The handler function for the route.
  */
-open class Route(name: String, private val method: HttpMethod, val handler: (RequestObject) -> FullHttpResponse)
+open class Route(name: String, private val method: HttpMethod, val handler: RequestHandler)
     : Node(name) {
     override val isExecutable = true
-    override fun handleRequest(requestObject: RequestObject) = handler(requestObject)
+    override fun handleRequest(requestObject: RequestObject) = handler.handleRequest(requestObject)
     override fun matchesMethod(method: HttpMethod) =
         this.method == method && super.matchesMethod(method)
 

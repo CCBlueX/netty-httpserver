@@ -19,13 +19,7 @@
  */
 package net.ccbluex.netty.http.rest
 
-import io.netty.handler.codec.http.FullHttpResponse
 import io.netty.handler.codec.http.HttpMethod
-import net.ccbluex.netty.http.util.httpFile
-import net.ccbluex.netty.http.util.httpForbidden
-import net.ccbluex.netty.http.util.httpNotFound
-import net.ccbluex.netty.http.model.RequestObject
-import java.io.File
 
 /**
  * Controller for handling routing of HTTP requests.

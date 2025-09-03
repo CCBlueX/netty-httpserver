@@ -21,9 +21,7 @@ package net.ccbluex.netty.http.rest
 
 import io.netty.handler.codec.http.FullHttpResponse
 import io.netty.handler.codec.http.HttpMethod
-import net.ccbluex.netty.http.util.httpFile
-import net.ccbluex.netty.http.util.httpForbidden
-import net.ccbluex.netty.http.util.httpNotFound
+import net.ccbluex.netty.http.model.RequestHandler
 import net.ccbluex.netty.http.model.RequestObject
 import java.io.File
 import java.io.InputStream
@@ -66,7 +64,7 @@ open class Node(val part: String) {
      * @param handler The handler function for the route.
      * @return The node representing the route.
      */
-    fun route(path: String, method: HttpMethod, handler: (RequestObject) -> FullHttpResponse) =
+    fun route(path: String, method: HttpMethod, handler: RequestHandler) =
         chain({ Route(it, method, handler) }, *path.asPathArray())
 
     /**
@@ -89,28 +87,28 @@ open class Node(val part: String) {
     fun zip(path: String, zipInputStream: InputStream) =
         chain({ ZipServant(it, zipInputStream) }, *path.asPathArray())
 
-    fun get(path: String, handler: (RequestObject) -> FullHttpResponse)
+    fun get(path: String, handler: RequestHandler)
             = route(path, HttpMethod.GET, handler)
 
-    fun post(path: String, handler: (RequestObject) -> FullHttpResponse)
+    fun post(path: String, handler: RequestHandler)
             = route(path, HttpMethod.POST, handler)
 
-    fun put(path: String, handler: (RequestObject) -> FullHttpResponse)
+    fun put(path: String, handler: RequestHandler)
             = route(path, HttpMethod.PUT, handler)
 
-    fun delete(path: String, handler: (RequestObject) -> FullHttpResponse)
+    fun delete(path: String, handler: RequestHandler)
             = route(path, HttpMethod.DELETE, handler)
 
-    fun patch(path: String, handler: (RequestObject) -> FullHttpResponse)
+    fun patch(path: String, handler: RequestHandler)
             = route(path, HttpMethod.PATCH, handler)
 
-    fun head(path: String, handler: (RequestObject) -> FullHttpResponse)
+    fun head(path: String, handler: RequestHandler)
             = route(path, HttpMethod.HEAD, handler)
 
-    fun options(path: String, handler: (RequestObject) -> FullHttpResponse)
+    fun options(path: String, handler: RequestHandler)
             = route(path, HttpMethod.OPTIONS, handler)
 
-    fun trace(path: String, handler: (RequestObject) -> FullHttpResponse)
+    fun trace(path: String, handler: RequestHandler)
             = route(path, HttpMethod.TRACE, handler)
 
     /**
