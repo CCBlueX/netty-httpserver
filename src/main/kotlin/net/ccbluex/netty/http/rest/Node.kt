@@ -32,7 +32,7 @@ import java.io.InputStream
  * @property part The part of the path this node represents.
  */
 @Suppress("TooManyFunctions")
-open class Node(val part: String) {
+open class Node(val part: String) : RequestHandler {
 
     open val isRoot = part.isEmpty()
     open val isExecutable = false
@@ -135,7 +135,7 @@ open class Node(val part: String) {
      * @param requestObject The request object.
      * @return The HTTP response.
      */
-    open fun handleRequest(requestObject: RequestObject): FullHttpResponse {
+    override suspend fun handleRequest(requestObject: RequestObject): FullHttpResponse {
         error("Node does not implement handleRequest")
     }
 

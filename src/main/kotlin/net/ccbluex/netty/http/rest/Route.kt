@@ -34,7 +34,7 @@ import java.io.File
 open class Route(name: String, private val method: HttpMethod, val handler: RequestHandler)
     : Node(name) {
     override val isExecutable = true
-    override fun handleRequest(requestObject: RequestObject) = handler.handleRequest(requestObject)
+    override suspend fun handleRequest(requestObject: RequestObject) = handler.handleRequest(requestObject)
     override fun matchesMethod(method: HttpMethod) =
         this.method == method && super.matchesMethod(method)
 

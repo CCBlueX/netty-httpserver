@@ -97,20 +97,22 @@ class HttpServer {
     /**
      * Stops the Netty server gracefully.
      */
-    fun stop() = lock.withLock {
-        logger.info("Shutting down Netty server...")
-        try {
-            serverChannel?.close()?.sync()
-            bossGroup?.shutdownGracefully()?.sync()
-            workerGroup?.shutdownGracefully()?.sync()
-        } catch (e: Exception) {
-            logger.warn("Error during shutdown", e)
-        } finally {
-            serverChannel = null
-            bossGroup = null
-            workerGroup = null
+    fun stop() {
+        lock.withLock {
+            logger.info("Shutting down Netty server...")
+            try {
+                serverChannel?.close()?.sync()
+                bossGroup?.shutdownGracefully()?.sync()
+                workerGroup?.shutdownGracefully()?.sync()
+            } catch (e: Exception) {
+                logger.warn("Error during shutdown", e)
+            } finally {
+                serverChannel = null
+                bossGroup = null
+                workerGroup = null
+            }
+            logger.info("Netty server stopped.")
         }
-        logger.info("Netty server stopped.")
     }
 
 }
