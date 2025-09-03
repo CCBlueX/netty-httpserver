@@ -37,6 +37,20 @@ internal class WebSocketHandler(
 ) : ChannelInboundHandlerAdapter() {
 
     /**
+     * Registers close listener for the channel.
+     */
+    override fun handlerAdded(ctx: ChannelHandlerContext) {
+        super.handlerAdded(ctx)
+        ctx.channel().closeFuture().addListener { future ->
+            if (future.isSuccess) {
+                server.webSocketController.removeContext(ctx)
+            } else {
+                logger.warn("WebSocket close failed (channel: ${ctx.channel()})", future.cause())
+            }
+        }
+    }
+
+    /**
      * Reads the incoming messages and processes WebSocket frames.
      *
      * @param ctx The context of the channel handler.
@@ -54,10 +68,7 @@ internal class WebSocketHandler(
                     // Accept close frame and send close frame back
                     channel.writeAndFlush(msg.retainedDuplicate())
                         .addListener(ChannelFutureListener.CLOSE)
-                    channel.closeFuture().addListener {
-                        server.webSocketController.removeContext(ctx)
-                        logger.debug("WebSocket closed due to ${msg.reasonText()} (${msg.statusCode()})")
-                    }
+                    logger.debug("WebSocket closing due to ${msg.reasonText()} (${msg.statusCode()})")
                 }
                 else -> logger.error("Unknown WebSocketFrame type: ${msg.javaClass.name}")
             }

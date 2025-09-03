@@ -50,7 +50,11 @@ internal class HttpServerHandler(
     private val localRequestContext = ThreadLocal<RequestContext>()
     private lateinit var channelScope: CoroutineScope
 
+    /**
+     * Adds the [CoroutineScope] of current [io.netty.channel.Channel].
+     */
     override fun handlerAdded(ctx: ChannelHandlerContext) {
+        super.handlerAdded(ctx)
         val eventLoop = ctx.channel().eventLoop()
         channelScope = CoroutineScope(
             eventLoop.asCoroutineDispatcher() + CoroutineName(ctx.channel().id().asLongText())
