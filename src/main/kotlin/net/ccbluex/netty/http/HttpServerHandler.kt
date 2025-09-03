@@ -26,6 +26,7 @@ import io.netty.handler.codec.http.HttpHeaderNames
 import io.netty.handler.codec.http.HttpRequest
 import io.netty.handler.codec.http.LastHttpContent
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -55,9 +56,20 @@ internal class HttpServerHandler(
      */
     override fun handlerAdded(ctx: ChannelHandlerContext) {
         super.handlerAdded(ctx)
-        val eventLoop = ctx.channel().eventLoop()
+
+        val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+            val ctxName = ctx.name()
+            val channelId = ctx.channel().id().asLongText()
+            logger.error(
+                "Uncaught coroutine error in [ctx: $ctxName, channel: $channelId]",
+                throwable
+            )
+        }
+
         channelScope = CoroutineScope(
-            eventLoop.asCoroutineDispatcher() + CoroutineName(ctx.channel().id().asLongText())
+            ctx.channel().eventLoop().asCoroutineDispatcher()
+                    + CoroutineName("${ctx.name()}-${ctx.channel().id().asShortText()}")
+                    + exceptionHandler
         )
         ctx.channel().closeFuture().addListener { channelScope.cancel() }
     }
