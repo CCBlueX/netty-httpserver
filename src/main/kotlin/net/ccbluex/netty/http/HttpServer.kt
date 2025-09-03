@@ -25,16 +25,20 @@ import io.netty.channel.ChannelOption
 import io.netty.channel.EventLoopGroup
 import io.netty.handler.logging.LogLevel
 import io.netty.handler.logging.LoggingHandler
-import kotlinx.coroutines.Job
 import net.ccbluex.netty.http.middleware.Middleware
 import net.ccbluex.netty.http.rest.RouteController
 import net.ccbluex.netty.http.util.TransportType
 import net.ccbluex.netty.http.websocket.WebSocketController
 import org.apache.logging.log4j.LogManager
 import java.net.InetSocketAddress
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicInteger
 
+private const val STATE_IDLE = 0
+private const val STATE_STARTING = -1
+private const val STATE_START_ERROR = -2
+private const val STATE_STARTED = -3
+private const val STATE_STOPPING = -4
 
 /**
  * NettyRest - A Web Rest-API server with support for WebSocket and File Serving using Netty.
@@ -43,10 +47,12 @@ import kotlin.concurrent.withLock
  */
 class HttpServer {
 
+    private val state = AtomicInteger(STATE_IDLE)
+
     val routeController = RouteController()
     val webSocketController = WebSocketController()
 
-    internal val middlewares = mutableListOf<Middleware>()
+    internal val middlewares = CopyOnWriteArrayList<Middleware>()
 
     private var bossGroup: EventLoopGroup? = null
     private var workerGroup: EventLoopGroup? = null
@@ -66,8 +72,16 @@ class HttpServer {
      * @param port The port of HTTP server. `0` means to auto select one.
      *
      * @return actual port of server.
+     *
+     * @throws IllegalStateException if server is not available to start.
      */
     fun start(port: Int = 0): Int {
+        val canStart = state.compareAndSet(STATE_IDLE, STATE_STARTING)
+                || state.compareAndSet(STATE_START_ERROR, STATE_STARTING)
+        if (!canStart) {
+            error("Server is not idle.")
+        }
+
         val b = ServerBootstrap()
 
         val groups = TransportType.apply(b)
@@ -80,11 +94,24 @@ class HttpServer {
                 .handler(LoggingHandler(LogLevel.INFO))
                 .childHandler(HttpChannelInitializer(this))
             val ch = b.bind(port).sync().channel()
+            val actualPort = (ch.localAddress() as InetSocketAddress).port
+            ch.closeFuture().addListener {
+                if (!it.isSuccess) {
+                    logger.error("Server channel closed unexpectedly (port: $actualPort)", it.cause())
+                    state.compareAndSet(STATE_STARTED, STATE_START_ERROR)
+                    stop()
+                } else {
+                    logger.debug("Server channel closed normally (port: $actualPort)")
+                    state.compareAndSet(STATE_STARTED, STATE_IDLE)
+                }
+            }
+
+            logger.info("Netty server started on port $actualPort.")
+
             serverChannel = ch
+            state.set(STATE_STARTED)
 
-            logger.info("Netty server started on port $port.")
-
-            return (ch.localAddress() as InetSocketAddress).port
+            return actualPort
         } catch (t: Throwable) {
             logger.error("Netty server failed - $port", t)
             stop()
@@ -95,10 +122,19 @@ class HttpServer {
 
     /**
      * Stops the Netty server gracefully.
+     *
+     * @throws IllegalStateException if server is not available to stop.
      */
     fun stop() {
+        val canStop = state.compareAndSet(STATE_STARTED, STATE_STOPPING)
+                || state.compareAndSet(STATE_START_ERROR, STATE_STOPPING)
+        if (!canStop) {
+            error("Server is not started neither failed to start.")
+        }
+
         logger.info("Shutting down Netty server...")
         try {
+            webSocketController.disconnect()
             serverChannel?.close()?.sync()
             bossGroup?.shutdownGracefully()?.sync()
             workerGroup?.shutdownGracefully()?.sync()
@@ -109,6 +145,7 @@ class HttpServer {
             serverChannel = null
             bossGroup = null
             workerGroup = null
+            state.set(STATE_IDLE)
         }
     }
 
