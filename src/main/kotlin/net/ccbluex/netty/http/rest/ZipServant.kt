@@ -121,7 +121,7 @@ class ZipServant(part: String, zipInputStream: InputStream) : Node(part) {
         return files
     }
 
-    override fun handleRequest(requestObject: RequestObject): FullHttpResponse {
+    override suspend fun handleRequest(requestObject: RequestObject): FullHttpResponse {
         val path = requestObject.remainingPath.removePrefix("/")
         val cleanPath = path.substringBefore("?")
         val sanitizedPath = cleanPath.replace("..", "")

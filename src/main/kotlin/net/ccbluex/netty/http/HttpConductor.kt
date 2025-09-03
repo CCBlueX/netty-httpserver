@@ -34,14 +34,15 @@ import net.ccbluex.netty.http.util.httpNoContent
  * @param context The request context to process.
  * @return The response to the request.
  */
-internal fun HttpServer.processRequestContext(context: RequestContext) = runCatching {
-    val content = context.contentBuffer.toString()
+internal suspend fun HttpServer.processRequestContext(context: RequestContext) = runCatching {
+    val contentBytes = context.contentBuffer.toByteArray()
+    val content = contentBytes.toString(Charsets.UTF_8)
     val method = context.httpMethod
 
     logger.debug("Request {}", context)
 
     if (!context.headers["content-length"].isNullOrEmpty() &&
-        context.headers["content-length"]?.toInt() != content.toByteArray(Charsets.UTF_8).size) {
+        context.headers["content-length"]?.toInt() != contentBytes.size) {
         logger.warn("Received incomplete request: $context")
         return@runCatching httpBadRequest("Incomplete request")
     }

@@ -25,6 +25,7 @@ import io.netty.channel.ChannelOption
 import io.netty.channel.EventLoopGroup
 import io.netty.handler.logging.LogLevel
 import io.netty.handler.logging.LoggingHandler
+import kotlinx.coroutines.Job
 import net.ccbluex.netty.http.middleware.Middleware
 import net.ccbluex.netty.http.rest.RouteController
 import net.ccbluex.netty.http.util.TransportType

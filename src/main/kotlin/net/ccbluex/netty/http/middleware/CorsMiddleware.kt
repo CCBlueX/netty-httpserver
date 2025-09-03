@@ -30,7 +30,7 @@ class CorsMiddleware(
      * Middleware to handle CORS requests.
      * Pass to server.middleware() to apply the CORS policy to all requests.
      */
-    override fun invoke(context: RequestContext, response: FullHttpResponse): FullHttpResponse {
+    override suspend fun invoke(context: RequestContext, response: FullHttpResponse): FullHttpResponse {
         val httpHeaders = response.headers()
         val requestOrigin = context.headers["origin"] ?: context.headers["Origin"]
 

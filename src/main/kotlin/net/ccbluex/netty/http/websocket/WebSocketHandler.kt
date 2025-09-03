@@ -31,7 +31,9 @@ import net.ccbluex.netty.http.HttpServer.Companion.logger
  * @property server The instance of the http server.
  * @see [https://tools.ietf.org/html/rfc6455]
  */
-internal class WebSocketHandler(private val server: HttpServer) : ChannelInboundHandlerAdapter() {
+internal class WebSocketHandler(
+    private val server: HttpServer,
+) : ChannelInboundHandlerAdapter() {
 
     /**
      * Reads the incoming messages and processes WebSocket frames.
