@@ -21,9 +21,16 @@
 package net.ccbluex.netty.http.util
 
 import io.netty.buffer.ByteBuf
+import io.netty.buffer.ByteBufAllocator
 import io.netty.buffer.ByteBufInputStream
 import io.netty.buffer.ByteBufOutputStream
 
 inline fun ByteBuf.inputStream() = ByteBufInputStream(this)
 
 inline fun ByteBuf.outputStream() = ByteBufOutputStream(this)
+
+internal fun ByteBufAllocator.copyOf(byteBuf: ByteBuf): ByteBuf {
+    val copy = this.buffer(byteBuf.readableBytes())
+    copy.writeBytes(byteBuf)
+    return copy
+}

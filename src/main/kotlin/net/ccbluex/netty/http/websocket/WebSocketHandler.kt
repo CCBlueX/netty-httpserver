@@ -25,6 +25,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter
 import io.netty.handler.codec.http.websocketx.*
 import net.ccbluex.netty.http.HttpServer
 import net.ccbluex.netty.http.HttpServer.Companion.logger
+import net.ccbluex.netty.http.util.copyOf
 
 /**
  * Handles WebSocket frames for the http server.
@@ -62,8 +63,11 @@ internal class WebSocketHandler(
             logger.debug("WebSocketFrame received ({}): {}", channel, msg.javaClass.name)
 
             when (msg) {
-                is TextWebSocketFrame -> channel.writeAndFlush(TextWebSocketFrame(msg.text()))
-                is PingWebSocketFrame -> channel.writeAndFlush(PongWebSocketFrame(msg.content().retain()))
+                is PingWebSocketFrame -> {
+                    val pongBuffer = channel.alloc().copyOf(msg.content())
+                    channel.writeAndFlush(PongWebSocketFrame(pongBuffer))
+                }
+
                 is CloseWebSocketFrame -> {
                     // Accept close frame and send close frame back
                     channel.writeAndFlush(msg.retainedDuplicate())
@@ -72,6 +76,9 @@ internal class WebSocketHandler(
                 }
                 else -> logger.error("Unknown WebSocketFrame type: ${msg.javaClass.name}")
             }
+        } else {
+            // Non-WebSocket frame, pass it to the next handler
+            ctx.fireChannelRead(msg)
         }
     }
 
