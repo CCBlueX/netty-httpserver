@@ -19,11 +19,13 @@
  */
 package net.ccbluex.netty.http.websocket
 
+import io.netty.channel.ChannelFutureListener
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
 import io.netty.handler.codec.http.websocketx.*
 import net.ccbluex.netty.http.HttpServer
 import net.ccbluex.netty.http.HttpServer.Companion.logger
+import net.ccbluex.netty.http.util.copyOf
 
 /**
  * Handles WebSocket frames for the http server.
@@ -31,7 +33,23 @@ import net.ccbluex.netty.http.HttpServer.Companion.logger
  * @property server The instance of the http server.
  * @see [https://tools.ietf.org/html/rfc6455]
  */
-internal class WebSocketHandler(private val server: HttpServer) : ChannelInboundHandlerAdapter() {
+internal class WebSocketHandler(
+    private val server: HttpServer,
+) : ChannelInboundHandlerAdapter() {
+
+    /**
+     * Registers close listener for the channel.
+     */
+    override fun handlerAdded(ctx: ChannelHandlerContext) {
+        super.handlerAdded(ctx)
+        ctx.channel().closeFuture().addListener { future ->
+            if (future.isSuccess) {
+                server.webSocketController.removeContext(ctx)
+            } else {
+                logger.warn("WebSocket close failed (channel: ${ctx.channel()})", future.cause())
+            }
+        }
+    }
 
     /**
      * Reads the incoming messages and processes WebSocket frames.
@@ -41,21 +59,26 @@ internal class WebSocketHandler(private val server: HttpServer) : ChannelInbound
      */
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
         if (msg is WebSocketFrame) {
-            logger.debug("WebSocketFrame received ({}): {}", ctx.channel(), msg.javaClass.name)
+            val channel = ctx.channel()
+            logger.debug("WebSocketFrame received ({}): {}", channel, msg.javaClass.name)
 
             when (msg) {
-                is TextWebSocketFrame -> ctx.channel().writeAndFlush(TextWebSocketFrame(msg.text()))
-                is PingWebSocketFrame -> ctx.channel().writeAndFlush(PongWebSocketFrame(msg.content().retain()))
+                is PingWebSocketFrame -> {
+                    val pongBuffer = channel.alloc().copyOf(msg.content())
+                    channel.writeAndFlush(PongWebSocketFrame(pongBuffer))
+                }
+
                 is CloseWebSocketFrame -> {
                     // Accept close frame and send close frame back
-                    ctx.channel().writeAndFlush(msg.retainedDuplicate())
-                    ctx.channel().close().sync()
-
-                    server.webSocketController.removeContext(ctx)
-                    logger.debug("WebSocket closed due to ${msg.reasonText()} (${msg.statusCode()})")
+                    channel.writeAndFlush(msg.retainedDuplicate())
+                        .addListener(ChannelFutureListener.CLOSE)
+                    logger.debug("WebSocket closing due to ${msg.reasonText()} (${msg.statusCode()})")
                 }
                 else -> logger.error("Unknown WebSocketFrame type: ${msg.javaClass.name}")
             }
+        } else {
+            // Non-WebSocket frame, pass it to the next handler
+            ctx.fireChannelRead(msg)
         }
     }
 

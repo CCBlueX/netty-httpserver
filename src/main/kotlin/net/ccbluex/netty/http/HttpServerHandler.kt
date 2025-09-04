@@ -26,8 +26,17 @@ import io.netty.handler.codec.http.HttpHeaderNames
 import io.netty.handler.codec.http.HttpRequest
 import io.netty.handler.codec.http.LastHttpContent
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import net.ccbluex.netty.http.HttpServer.Companion.logger
 import net.ccbluex.netty.http.model.RequestContext
+import net.ccbluex.netty.http.util.awaitSuspend
+import net.ccbluex.netty.http.util.httpInternalServerError
+import net.ccbluex.netty.http.util.readFully
 import net.ccbluex.netty.http.websocket.WebSocketHandler
 import java.net.URLDecoder
 
@@ -36,9 +45,35 @@ import java.net.URLDecoder
  *
  * @property server The instance of the http server.
  */
-internal class HttpServerHandler(private val server: HttpServer) : ChannelInboundHandlerAdapter() {
+internal class HttpServerHandler(
+    private val server: HttpServer,
+) : ChannelInboundHandlerAdapter() {
 
     private val localRequestContext = ThreadLocal<RequestContext>()
+    private lateinit var channelScope: CoroutineScope
+
+    /**
+     * Adds the [CoroutineScope] of current [io.netty.channel.Channel].
+     */
+    override fun handlerAdded(ctx: ChannelHandlerContext) {
+        super.handlerAdded(ctx)
+
+        val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+            val ctxName = ctx.name()
+            val channelId = ctx.channel().id().asLongText()
+            logger.error(
+                "Uncaught coroutine error in [ctx: $ctxName, channel: $channelId]",
+                throwable
+            )
+        }
+
+        channelScope = CoroutineScope(
+            ctx.channel().eventLoop().asCoroutineDispatcher()
+                    + CoroutineName("${ctx.name()}-${ctx.channel().id().asShortText()}")
+                    + exceptionHandler
+        )
+        ctx.channel().closeFuture().addListener { channelScope.cancel() }
+    }
 
     /**
      * Extension property to get the WebSocket URL from an HttpRequest.
@@ -101,17 +136,30 @@ internal class HttpServerHandler(private val server: HttpServer) : ChannelInboun
                 }
 
                 // Append content to the buffer
-                requestContext
-                    .contentBuffer
-                    .append(msg.content().toString(Charsets.UTF_8))
+                try {
+                    msg.content().readFully(requestContext.contentBuffer)
+                } finally {
+                    msg.release()
+                }
 
                 // If this is the last content, process the request
                 if (msg is LastHttpContent) {
                     localRequestContext.remove()
 
-                    val response = server.processRequestContext(requestContext)
-                    val httpResponse = server.middlewares.fold(response) { acc, f -> f(requestContext, acc) }
-                    ctx.writeAndFlush(httpResponse)
+                    channelScope.launch {
+                        try {
+                            val response = server.processRequestContext(requestContext)
+                            val httpResponse = server.middlewares.fold(response) { acc, f ->
+                                f(requestContext, acc)
+                            }
+                            ctx.writeAndFlush(httpResponse)
+                                .awaitSuspend()
+                        } catch (t: Throwable) {
+                            logger.error("Error while processing request", t)
+                            ctx.writeAndFlush(httpInternalServerError(t.message ?: "Unknown Error"))
+                                .awaitSuspend()
+                        }
+                    }
                 }
             }
 

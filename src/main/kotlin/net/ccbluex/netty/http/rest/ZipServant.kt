@@ -19,15 +19,18 @@
  */
 package net.ccbluex.netty.http.rest
 
+import io.netty.buffer.Unpooled
 import io.netty.handler.codec.http.FullHttpResponse
-import net.ccbluex.netty.http.util.httpFileStream
+import io.netty.handler.codec.http.HttpResponseStatus
 import net.ccbluex.netty.http.util.httpNotFound
 import net.ccbluex.netty.http.model.RequestObject
+import net.ccbluex.netty.http.util.httpResponse
 import org.apache.tika.Tika
-import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
+
+private val EMPTY_BYTE_ARRAY = ByteArray(0)
 
 /**
  * Represents a zip servant in the routing tree that serves files from a zip archive kept in memory.
@@ -79,6 +82,14 @@ class ZipServant(part: String, zipInputStream: InputStream) : Node(part) {
         zipFiles = loadZipData(zipInputStream)
     }
 
+    private fun ZipFileEntry.toHttpResponse(): FullHttpResponse {
+        return httpResponse(
+            status = HttpResponseStatus.OK,
+            contentType = tika.detect(this.name),
+            content = Unpooled.wrappedBuffer(this.data),
+        )
+    }
+
     /**
      * Loads the zip file data into memory.
      *
@@ -96,7 +107,7 @@ class ZipServant(part: String, zipInputStream: InputStream) : Node(part) {
                 val isDirectory = entry.isDirectory
 
                 if (isDirectory) {
-                    files[name] = ZipFileEntry(name, ByteArray(0), true)
+                    files[name] = ZipFileEntry(name, EMPTY_BYTE_ARRAY, true)
                 } else {
                     val data = zis.readBytes()
                     files[name] = ZipFileEntry(name, data, false)
@@ -110,7 +121,7 @@ class ZipServant(part: String, zipInputStream: InputStream) : Node(part) {
         return files
     }
 
-    override fun handleRequest(requestObject: RequestObject): FullHttpResponse {
+    override suspend fun handleRequest(requestObject: RequestObject): FullHttpResponse {
         val path = requestObject.remainingPath.removePrefix("/")
         val cleanPath = path.substringBefore("?")
         val sanitizedPath = cleanPath.replace("..", "")
@@ -141,11 +152,7 @@ class ZipServant(part: String, zipInputStream: InputStream) : Node(part) {
         // Try to find exact file match first (non-directory)
         val exactMatch = findFile(sanitizedPath)
         if (exactMatch != null && !exactMatch.isDirectory) {
-            return httpFileStream(
-                stream = ByteArrayInputStream(exactMatch.data),
-                contentType = tika.detect(exactMatch.name),
-                contentLength = exactMatch.data.size
-            )
+            return exactMatch.toHttpResponse()
         }
 
         // Handle directory requests or SPA routes
@@ -154,11 +161,7 @@ class ZipServant(part: String, zipInputStream: InputStream) : Node(part) {
             sanitizedPath.isEmpty() -> {
                 val indexEntry = findIndexInDirectory("")
                 if (indexEntry != null && !indexEntry.isDirectory) {
-                    return httpFileStream(
-                        stream = ByteArrayInputStream(indexEntry.data),
-                        contentType = tika.detect(indexEntry.name),
-                        contentLength = indexEntry.data.size
-                    )
+                    return indexEntry.toHttpResponse()
                 }
             }
 
@@ -166,11 +169,7 @@ class ZipServant(part: String, zipInputStream: InputStream) : Node(part) {
             sanitizedPath.endsWith("/") -> {
                 val indexEntry = findIndexInDirectory(directoryPath)
                 if (indexEntry != null && !indexEntry.isDirectory) {
-                    return httpFileStream(
-                        stream = ByteArrayInputStream(indexEntry.data),
-                        contentType = tika.detect(indexEntry.name),
-                        contentLength = indexEntry.data.size
-                    )
+                    return indexEntry.toHttpResponse()
                 }
             }
 
@@ -178,11 +177,7 @@ class ZipServant(part: String, zipInputStream: InputStream) : Node(part) {
             fragmentIndex != -1 -> {
                 val indexEntry = findIndexInDirectory(directoryPath)
                 if (indexEntry != null && !indexEntry.isDirectory) {
-                    return httpFileStream(
-                        stream = ByteArrayInputStream(indexEntry.data),
-                        contentType = tika.detect(indexEntry.name),
-                        contentLength = indexEntry.data.size
-                    )
+                    return indexEntry.toHttpResponse()
                 }
             }
 
@@ -190,11 +185,7 @@ class ZipServant(part: String, zipInputStream: InputStream) : Node(part) {
             isImplicitDirectory(sanitizedPath) -> {
                 val indexEntry = findIndexInDirectory(sanitizedPath)
                 if (indexEntry != null && !indexEntry.isDirectory) {
-                    return httpFileStream(
-                        stream = ByteArrayInputStream(indexEntry.data),
-                        contentType = tika.detect(indexEntry.name),
-                        contentLength = indexEntry.data.size
-                    )
+                    return indexEntry.toHttpResponse()
                 }
             }
         }

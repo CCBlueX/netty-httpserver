@@ -1,5 +1,6 @@
 import com.google.gson.JsonObject
 import io.netty.handler.codec.http.FullHttpResponse
+import kotlinx.coroutines.delay
 import net.ccbluex.netty.http.HttpServer
 import net.ccbluex.netty.http.model.RequestObject
 import net.ccbluex.netty.http.util.httpOk
@@ -71,6 +72,7 @@ class HttpServerTest {
             get("/a", ::a)
             get("/b", ::b)
             get("/c", ::c)
+            get("/s", ::s)
             get("/v/:name", ::param)
             get("/r/:value1/:value2", ::params)
             get("/o/:value1/in/:value2", ::params)
@@ -132,6 +134,13 @@ class HttpServerTest {
     fun c(requestObject: RequestObject): FullHttpResponse {
         return httpOk(JsonObject().apply {
             addProperty("char", "C")
+        })
+    }
+
+    suspend fun s(requestObject: RequestObject): FullHttpResponse {
+        delay(500)
+        return httpOk(JsonObject().apply {
+            addProperty("char", "S")
         })
     }
 
@@ -203,6 +212,20 @@ class HttpServerTest {
         assertNotNull(responseBody, "Response body should not be null")
 
         assertTrue(responseBody.contains("\"char\":\"C\""), "Response should contain char 'C'")
+    }
+
+    /**
+     * Test the "/s" endpoint and verify that it returns the correct character.
+     */
+    @Test
+    fun testSEndpoint() {
+        val response = makeRequest("/s")
+        assertEquals(200, response.code(), "Expected status code 200")
+
+        val responseBody = response.body()?.string()
+        assertNotNull(responseBody, "Response body should not be null")
+
+        assertTrue(responseBody.contains("\"char\":\"S\""), "Response should contain char 'S'")
     }
 
     /**

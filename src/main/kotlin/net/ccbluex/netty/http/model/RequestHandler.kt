@@ -17,23 +17,10 @@
  * along with Netty-Rest. If not, see <https://www.gnu.org/licenses/>.
  *
  */
-@file:Suppress("NOTHING_TO_INLINE")
-package net.ccbluex.netty.http.util
+package net.ccbluex.netty.http.model
 
-import io.netty.buffer.ByteBuf
-import io.netty.buffer.ByteBufAllocator
-import io.netty.buffer.ByteBufInputStream
-import io.netty.buffer.ByteBufOutputStream
-import java.io.OutputStream
+import io.netty.handler.codec.http.FullHttpResponse
 
-inline fun ByteBuf.inputStream() = ByteBufInputStream(this)
-
-inline fun ByteBuf.outputStream() = ByteBufOutputStream(this)
-
-internal inline fun ByteBufAllocator.copyOf(byteBuf: ByteBuf): ByteBuf {
-    val copy = this.buffer(byteBuf.readableBytes())
-    copy.writeBytes(byteBuf)
-    return copy
+fun interface RequestHandler {
+    suspend fun handleRequest(requestObject: RequestObject): FullHttpResponse
 }
-
-internal inline fun ByteBuf.readFully(out: OutputStream): ByteBuf = readBytes(out, readableBytes())

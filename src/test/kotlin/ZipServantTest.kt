@@ -20,6 +20,7 @@
 
 import io.netty.handler.codec.http.HttpMethod
 import io.netty.handler.codec.http.HttpResponseStatus
+import kotlinx.coroutines.test.runTest
 import net.ccbluex.netty.http.model.RequestObject
 import net.ccbluex.netty.http.rest.ZipServant
 import org.junit.jupiter.api.Test
@@ -107,7 +108,7 @@ class ZipServantTest {
     }
 
     @Test
-    fun `should serve index html for root path`() {
+    fun `should serve index html for root path`() = runTest {
         val zipData = createTestZip()
         val zipServant = ZipServant("static", zipData.inputStream())
 
@@ -121,7 +122,7 @@ class ZipServantTest {
     }
 
     @Test
-    fun `should serve index html for slash path`() {
+    fun `should serve index html for slash path`() = runTest {
         val zipData = createTestZip()
         val zipServant = ZipServant("static", zipData.inputStream())
 
@@ -132,7 +133,7 @@ class ZipServantTest {
     }
 
     @Test
-    fun `should serve specific files with correct content types`() {
+    fun `should serve specific files with correct content types`() = runTest {
         val zipData = createTestZip()
         val zipServant = ZipServant("static", zipData.inputStream())
 
@@ -160,7 +161,7 @@ class ZipServantTest {
     }
 
     @Test
-    fun `should handle files with dot-slash prefix`() {
+    fun `should handle files with dot-slash prefix`() = runTest {
         val zipData = createTestZip()
         val zipServant = ZipServant("static", zipData.inputStream())
 
@@ -173,7 +174,7 @@ class ZipServantTest {
     }
 
     @Test
-    fun `should return 404 for non-existent files`() {
+    fun `should return 404 for non-existent files`() = runTest {
         val zipData = createTestZip()
         val zipServant = ZipServant("static", zipData.inputStream())
 
@@ -183,7 +184,7 @@ class ZipServantTest {
     }
 
     @Test
-    fun `should sanitize path traversal attempts`() {
+    fun `should sanitize path traversal attempts`() = runTest {
         val zipData = createTestZip()
         val zipServant = ZipServant("static", zipData.inputStream())
 
@@ -193,7 +194,7 @@ class ZipServantTest {
     }
 
     @Test
-    fun `should handle paths without leading slash`() {
+    fun `should handle paths without leading slash`() = runTest {
         val zipData = createTestZip()
         val zipServant = ZipServant("static", zipData.inputStream())
 
@@ -204,7 +205,7 @@ class ZipServantTest {
     }
 
     @Test
-    fun `should serve index html for SPA routes with hash fragments`() {
+    fun `should serve index html for SPA routes with hash fragments`() = runTest {
         val zipData = createTestZip()
         val zipServant = ZipServant("static", zipData.inputStream())
 
@@ -217,7 +218,7 @@ class ZipServantTest {
     }
 
     @Test
-    fun `should handle unknown file extensions with default content type`() {
+    fun `should handle unknown file extensions with default content type`() = runTest {
         val baos = ByteArrayOutputStream()
         ZipOutputStream(baos).use { zos ->
             zos.putNextEntry(ZipEntry("test.unknown"))
@@ -233,7 +234,7 @@ class ZipServantTest {
     }
 
     @Test
-    fun `should handle various content types correctly`() {
+    fun `should handle various content types correctly`() = runTest {
         val baos = ByteArrayOutputStream()
         ZipOutputStream(baos).use { zos ->
             // Test various file types - using Tika's expected content types
@@ -279,7 +280,7 @@ class ZipServantTest {
     }
 
     @Test
-    fun `should handle empty zip file gracefully`() {
+    fun `should handle empty zip file gracefully`() = runTest {
         val baos = ByteArrayOutputStream()
         ZipOutputStream(baos).use { /* empty zip */ }
 
@@ -290,7 +291,7 @@ class ZipServantTest {
     }
 
     @Test
-    fun `should serve index html for directory paths with trailing slash`() {
+    fun `should serve index html for directory paths with trailing slash`() = runTest {
         val zipData = createTestZip()
         val zipServant = ZipServant("static", zipData.inputStream())
 
@@ -310,7 +311,7 @@ class ZipServantTest {
     }
 
     @Test
-    fun `should serve index html for SPA routes with fragments`() {
+    fun `should serve index html for SPA routes with fragments`() = runTest {
         val zipData = createTestZip()
         val zipServant = ZipServant("static", zipData.inputStream())
 
@@ -337,7 +338,7 @@ class ZipServantTest {
     }
 
     @Test
-    fun `should serve index html for implicit directory access`() {
+    fun `should serve index html for implicit directory access`() = runTest {
         val zipData = createTestZip()
         val zipServant = ZipServant("static", zipData.inputStream())
 
@@ -357,7 +358,7 @@ class ZipServantTest {
     }
 
     @Test
-    fun `should return 404 for directory without index html`() {
+    fun `should return 404 for directory without index html`() = runTest {
         val zipData = createTestZip()
         val zipServant = ZipServant("static", zipData.inputStream())
 

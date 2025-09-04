@@ -37,7 +37,7 @@ class FileServant(part: String, private val baseFolder: File) : Node(part) {
 
     override val isExecutable = true
 
-    override fun handleRequest(requestObject: RequestObject): FullHttpResponse {
+    override suspend fun handleRequest(requestObject: RequestObject): FullHttpResponse {
         val path = requestObject.remainingPath
         val sanitizedPath = path.replace("..", "")
         val file = baseFolder.resolve(sanitizedPath)

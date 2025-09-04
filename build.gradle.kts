@@ -28,15 +28,18 @@ kotlin {
 
 dependencies {
     // https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core
-    implementation("org.apache.logging.log4j:log4j-core:2.23.1")
+    api("org.apache.logging.log4j:log4j-core:2.23.1")
     // https://mvnrepository.com/artifact/io.netty/netty-all
-    implementation("io.netty:netty-all:4.1.115.Final")
+    api("io.netty:netty-all:4.1.115.Final")
     // https://mvnrepository.com/artifact/com.google.code.gson/gson
-    implementation("com.google.code.gson:gson:2.10.1")
+    api("com.google.code.gson:gson:2.10.1")
     // https://mvnrepository.com/artifact/org.apache.tika/tika-core
-    implementation("org.apache.tika:tika-core:2.9.2")
+    api("org.apache.tika:tika-core:2.9.2")
+    // https://mvnrepository.com/artifact/org.jetbrains.kotlinx/kotlinx-coroutines-core
+    api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
 
     testImplementation(kotlin("test"))
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
     testImplementation("com.squareup.retrofit2:retrofit:2.9.0")
     testImplementation("com.squareup.retrofit2:converter-gson:2.9.0")
 }
