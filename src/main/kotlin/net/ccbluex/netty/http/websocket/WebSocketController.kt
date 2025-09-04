@@ -20,7 +20,10 @@
 package net.ccbluex.netty.http.websocket
 
 import io.netty.channel.ChannelHandlerContext
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame
+import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus
+import net.ccbluex.netty.http.HttpServer.Companion.logger
 import net.ccbluex.netty.http.util.awaitSuspend
 import java.util.concurrent.CopyOnWriteArrayList
 
@@ -44,10 +47,14 @@ class WebSocketController {
     fun broadcast(text: String, failure: (ChannelHandlerContext, Throwable) -> Unit = { _, _ -> }) {
         val frame = TextWebSocketFrame(text)
         activeContexts.forEach { handlerContext ->
+            val channel = handlerContext.channel()
+            if (!channel.isActive) {
+                return@forEach
+            }
+
             val frameCopy = frame.retainedDuplicate()
             try {
-                handlerContext.channel()
-                    .writeAndFlush(frameCopy)
+                channel.writeAndFlush(frameCopy)
                     .addListener { future ->
                         if (!future.isSuccess) {
                             failure(handlerContext, future.cause() ?: IllegalStateException("Unknown write failure"))
@@ -63,7 +70,8 @@ class WebSocketController {
     }
 
     /**
-     * Broadcasts a message to all connected clients.
+     * Broadcasts a message to all connected clients **one by one**.
+     * Only when the previous message is sent (suspend), the next message will be sent.
      *
      * @param text The message to broadcast.
      * @param failure The action to take if a failure occurs.
@@ -71,9 +79,14 @@ class WebSocketController {
     suspend fun broadcastSuspend(text: String, failure: (ChannelHandlerContext, Throwable) -> Unit = { _, _ -> }) {
         val frame = TextWebSocketFrame(text)
         activeContexts.forEach { handlerContext ->
+            val channel = handlerContext.channel()
+            if (!channel.isActive) {
+                return@forEach
+            }
+
             val frameCopy = frame.retainedDuplicate()
             try {
-                handlerContext.channel().writeAndFlush(frameCopy).awaitSuspend()
+                channel.writeAndFlush(frameCopy).awaitSuspend()
             } catch (e: Throwable) {
                 failure(handlerContext, e)
                 frameCopy.release()
@@ -86,10 +99,40 @@ class WebSocketController {
      * Closes all active contexts.
      */
     fun disconnect() {
+        val closeFrame = CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE)
         activeContexts.removeIf { handlerContext ->
-            runCatching {
-                handlerContext.channel().close().sync()
-            }.isSuccess
+            val channel = handlerContext.channel()
+            if (!channel.isActive) {
+                return@removeIf true
+            }
+
+            val frameCopy = closeFrame.retainedDuplicate()
+            try {
+                channel.writeAndFlush(frameCopy)
+                    .addListener { future ->
+                        if (!future.isSuccess) {
+                            frameCopy.release()
+                            logger.warn("Failed to close WebSocket connection", future.cause())
+                        }
+                        handlerContext.close()
+                    }
+                    .sync()
+                true
+            } catch (e: Throwable) {
+                frameCopy.release()
+                logger.error("Error closing WebSocket connection", e)
+                false
+            }
+        }
+        closeFrame.release()
+    }
+
+    /**
+     * Removes all inactive contexts from the list of active contexts.
+     */
+    fun removeInactiveContexts() {
+        activeContexts.removeIf { handlerContext ->
+            !handlerContext.channel().isActive
         }
     }
 
