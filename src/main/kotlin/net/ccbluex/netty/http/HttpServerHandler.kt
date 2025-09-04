@@ -36,6 +36,7 @@ import net.ccbluex.netty.http.HttpServer.Companion.logger
 import net.ccbluex.netty.http.model.RequestContext
 import net.ccbluex.netty.http.util.awaitSuspend
 import net.ccbluex.netty.http.util.httpInternalServerError
+import net.ccbluex.netty.http.util.readFully
 import net.ccbluex.netty.http.websocket.WebSocketHandler
 import java.net.URLDecoder
 
@@ -136,7 +137,7 @@ internal class HttpServerHandler(
 
                 // Append content to the buffer
                 try {
-                    msg.content().readBytes(requestContext.contentBuffer, msg.content().readableBytes())
+                    msg.content().readFully(requestContext.contentBuffer)
                 } finally {
                     msg.release()
                 }
