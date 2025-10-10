@@ -19,6 +19,7 @@
  */
 package net.ccbluex.netty.http.model
 
+import io.netty.handler.codec.http.HttpHeaders
 import io.netty.handler.codec.http.HttpMethod
 import net.ccbluex.netty.http.util.DEFAULT_GSON
 
@@ -42,7 +43,7 @@ data class RequestObject(
     val body: String,
     val params: Map<String, String>,
     val queryParams: Map<String, String>,
-    val headers: Map<String, String>
+    val headers: HttpHeaders
 ) {
 
     /**

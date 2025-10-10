@@ -19,9 +19,10 @@
  */
 package net.ccbluex.netty.http.model
 
+import io.netty.handler.codec.http.HttpHeaders
 import io.netty.handler.codec.http.HttpMethod
 
-data class RequestContext(var httpMethod: HttpMethod, var uri: String, var headers: Map<String, String>) {
+data class RequestContext(var httpMethod: HttpMethod, var uri: String, var headers: HttpHeaders) {
     val contentBuffer = StringBuilder()
     val path = uri.substringBefore('?', uri)
     val params = getUriParams(uri)
@@ -43,7 +44,7 @@ private fun getUriParams(uri: String): Map<String, String> {
             val index = param.indexOf('=')
             if (index == -1) null
             else {
-                val key = param.substring(0, index)
+                val key = param.take(index)
                 val value = param.substring(index + 1)
                 if (key.isNotEmpty()) key to value else null
             }

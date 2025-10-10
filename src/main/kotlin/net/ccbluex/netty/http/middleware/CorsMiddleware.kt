@@ -2,6 +2,7 @@ package net.ccbluex.netty.http.middleware
 
 import io.netty.handler.codec.http.FullHttpResponse
 import io.netty.handler.codec.http.HttpHeaderNames
+import io.netty.handler.codec.http.HttpHeaders
 import net.ccbluex.netty.http.HttpServer.Companion.logger
 import net.ccbluex.netty.http.model.RequestContext
 import java.net.URI
@@ -32,7 +33,7 @@ class CorsMiddleware(
      */
     override fun invoke(context: RequestContext, response: FullHttpResponse): FullHttpResponse {
         val httpHeaders = response.headers()
-        val requestOrigin = context.headers["origin"] ?: context.headers["Origin"]
+        val requestOrigin = context.headers[HttpHeaderNames.ORIGIN]
 
         if (requestOrigin != null) {
             try {

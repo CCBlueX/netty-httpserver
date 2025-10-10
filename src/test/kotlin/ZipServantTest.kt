@@ -18,6 +18,8 @@
  *
  */
 
+import io.netty.handler.codec.http.EmptyHttpHeaders
+import io.netty.handler.codec.http.HttpHeaders
 import io.netty.handler.codec.http.HttpMethod
 import io.netty.handler.codec.http.HttpResponseStatus
 import net.ccbluex.netty.http.model.RequestObject
@@ -102,7 +104,7 @@ class ZipServantTest {
             body = "",
             params = emptyMap(),
             queryParams = emptyMap(),
-            headers = emptyMap()
+            headers = EmptyHttpHeaders.INSTANCE
         )
     }
 

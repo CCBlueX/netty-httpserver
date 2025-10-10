@@ -97,7 +97,7 @@ internal class HttpServerHandler(private val server: HttpServer) : ChannelInboun
                     val requestContext = RequestContext(
                         msg.method(),
                         URLDecoder.decode(msg.uri(), Charsets.UTF_8),
-                        msg.headers().associate { it.key to it.value },
+                        msg.headers(),
                     )
                     
                     localRequestContext.set(requestContext)
