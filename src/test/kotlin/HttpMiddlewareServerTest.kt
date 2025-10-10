@@ -65,7 +65,7 @@ class HttpMiddlewareServerTest {
             get("/", ::static)
         }
 
-        server.middleware(Middleware.OnFullHttpResponse { requestContext, fullHttpResponse ->
+        server.middleware(Middleware.OnResponse { requestContext, fullHttpResponse ->
             // Add custom headers to the response
             fullHttpResponse.headers().add("X-Custom-Header", "Custom Value")
 
@@ -77,11 +77,7 @@ class HttpMiddlewareServerTest {
 
             fullHttpResponse
         }).middleware(Middleware.OnWebSocketUpgrade { context, _ ->
-            context.writeAndFlush(
-                httpBadRequest("WebSocket unsupported")
-            )
-
-            false
+            httpBadRequest("WebSocket unsupported")
         })
 
         server.start(8080)  // Start the server on port 8080

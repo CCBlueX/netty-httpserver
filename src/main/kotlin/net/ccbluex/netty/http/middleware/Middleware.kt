@@ -27,19 +27,19 @@ import net.ccbluex.netty.http.model.RequestContext
 sealed interface Middleware {
     fun interface OnWebSocketUpgrade : Middleware {
         /**
-         * @return if it's accepted
+         * @return null, when accepted.
          */
-        operator fun invoke(ctx: ChannelHandlerContext, request: HttpRequest): Boolean
+        operator fun invoke(ctx: ChannelHandlerContext, request: HttpRequest): FullHttpResponse?
     }
 
-    fun interface OnRequestStart : Middleware {
+    fun interface OnRequest : Middleware {
         /**
-         * @return if it's accepted
+         * @return null, to continue processing the request.
          */
-        operator fun invoke(ctx: ChannelHandlerContext, request: HttpRequest, requestContext: RequestContext): Boolean
+        operator fun invoke(context: RequestContext): FullHttpResponse?
     }
 
-    fun interface OnFullHttpResponse : Middleware {
+    fun interface OnResponse : Middleware {
         operator fun invoke(context: RequestContext, response: FullHttpResponse): FullHttpResponse
     }
 }

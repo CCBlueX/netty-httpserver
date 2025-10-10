@@ -24,7 +24,7 @@ class CorsMiddleware(
         listOf("GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"),
     private val allowedHeaders: List<String> =
         listOf("Content-Type", "Content-Length", "Authorization", "Accept", "X-Requested-With")
-): Middleware.OnFullHttpResponse {
+): Middleware.OnResponse {
 
     /**
      * Middleware to handle CORS requests.

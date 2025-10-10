@@ -68,9 +68,13 @@ internal class HttpServerHandler(private val server: HttpServer) : ChannelInboun
                 if (connection.equals("Upgrade", ignoreCase = true) &&
                     upgrade.equals("WebSocket", ignoreCase = true)) {
 
-                    if (server.middlewares.any {
-                        it is Middleware.OnWebSocketUpgrade && !it.invoke(ctx, msg)
-                    }) return
+                    server.middlewares.filterIsInstance<Middleware.OnWebSocketUpgrade>().forEach { middleware ->
+                        val response = middleware.invoke(ctx, msg)
+                        if (response != null) {
+                            ctx.writeAndFlush(response)
+                            return
+                        }
+                    }
 
                     // Takes out Http Request Handler from the pipeline and replaces it with WebSocketHandler
                     ctx.pipeline().replace(this, "websocketHandler", WebSocketHandler(server))
@@ -95,11 +99,7 @@ internal class HttpServerHandler(private val server: HttpServer) : ChannelInboun
                         URLDecoder.decode(msg.uri(), Charsets.UTF_8),
                         msg.headers().associate { it.key to it.value },
                     )
-
-                    if (server.middlewares.any {
-                        it is Middleware.OnRequestStart && !it.invoke(ctx, msg, requestContext)
-                    }) return
-
+                    
                     localRequestContext.set(requestContext)
                 }
             }
@@ -119,11 +119,16 @@ internal class HttpServerHandler(private val server: HttpServer) : ChannelInboun
                 if (msg is LastHttpContent) {
                     localRequestContext.remove()
 
-                    var response = server.processRequestContext(requestContext)
-                    server.middlewares.forEach {
-                        if (it is Middleware.OnFullHttpResponse) {
-                            response = it.invoke(requestContext, response)
+                    server.middlewares.filterIsInstance<Middleware.OnRequest>().forEach { middleware ->
+                        val response = middleware.invoke(requestContext)
+                        if (response != null) {
+                            ctx.writeAndFlush(response)
+                            return
                         }
+                    }
+                    var response = server.processRequestContext(requestContext)
+                    server.middlewares.filterIsInstance<Middleware.OnResponse>().forEach { middleware ->
+                        response = middleware.invoke(requestContext, response)
                     }
                     ctx.writeAndFlush(response)
                 }
