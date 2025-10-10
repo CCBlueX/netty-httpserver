@@ -27,6 +27,7 @@ import io.netty.handler.codec.http.HttpRequest
 import io.netty.handler.codec.http.LastHttpContent
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory
 import net.ccbluex.netty.http.HttpServer.Companion.logger
+import net.ccbluex.netty.http.middleware.Middleware
 import net.ccbluex.netty.http.model.RequestContext
 import net.ccbluex.netty.http.websocket.WebSocketHandler
 import java.net.URLDecoder
@@ -66,6 +67,11 @@ internal class HttpServerHandler(private val server: HttpServer) : ChannelInboun
 
                 if (connection.equals("Upgrade", ignoreCase = true) &&
                     upgrade.equals("WebSocket", ignoreCase = true)) {
+
+                    if (server.middlewares.any {
+                        it is Middleware.OnWebSocketUpgrade && !it.invoke(ctx, msg)
+                    }) return
+
                     // Takes out Http Request Handler from the pipeline and replaces it with WebSocketHandler
                     ctx.pipeline().replace(this, "websocketHandler", WebSocketHandler(server))
 
@@ -90,6 +96,10 @@ internal class HttpServerHandler(private val server: HttpServer) : ChannelInboun
                         msg.headers().associate { it.key to it.value },
                     )
 
+                    if (server.middlewares.any {
+                        it is Middleware.OnRequestStart && !it.invoke(ctx, msg, requestContext)
+                    }) return
+
                     localRequestContext.set(requestContext)
                 }
             }
@@ -109,9 +119,13 @@ internal class HttpServerHandler(private val server: HttpServer) : ChannelInboun
                 if (msg is LastHttpContent) {
                     localRequestContext.remove()
 
-                    val response = server.processRequestContext(requestContext)
-                    val httpResponse = server.middlewares.fold(response) { acc, f -> f(requestContext, acc) }
-                    ctx.writeAndFlush(httpResponse)
+                    var response = server.processRequestContext(requestContext)
+                    server.middlewares.forEach {
+                        if (it is Middleware.OnFullHttpResponse) {
+                            response = it.invoke(requestContext, response)
+                        }
+                    }
+                    ctx.writeAndFlush(response)
                 }
             }
 
