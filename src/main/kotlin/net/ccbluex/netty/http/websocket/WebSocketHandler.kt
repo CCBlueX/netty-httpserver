@@ -19,6 +19,7 @@
  */
 package net.ccbluex.netty.http.websocket
 
+import io.netty.channel.ChannelFutureListener
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
 import io.netty.handler.codec.http.websocketx.*
@@ -48,8 +49,9 @@ internal class WebSocketHandler(private val server: HttpServer) : ChannelInbound
                 is PingWebSocketFrame -> ctx.channel().writeAndFlush(PongWebSocketFrame(msg.content().retain()))
                 is CloseWebSocketFrame -> {
                     // Accept close frame and send close frame back
-                    ctx.channel().writeAndFlush(msg.retainedDuplicate())
-                    ctx.channel().close().sync()
+                    ctx.channel()
+                        .writeAndFlush(msg.retainedDuplicate())
+                        .addListener(ChannelFutureListener.CLOSE)
 
                     server.webSocketController.removeContext(ctx)
                     logger.debug("WebSocket closed due to ${msg.reasonText()} (${msg.statusCode()})")
