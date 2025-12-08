@@ -21,9 +21,10 @@ package net.ccbluex.netty.http.model
 
 import io.netty.handler.codec.http.HttpHeaders
 import io.netty.handler.codec.http.HttpMethod
+import java.io.ByteArrayOutputStream
 
 data class RequestContext(var httpMethod: HttpMethod, var uri: String, var headers: HttpHeaders) {
-    val contentBuffer = StringBuilder()
+    val contentBuffer = ByteArrayOutputStream()
     val path = uri.substringBefore('?', uri)
     val params = getUriParams(uri)
 }

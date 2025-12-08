@@ -111,9 +111,7 @@ internal class HttpServerHandler(private val server: HttpServer) : ChannelInboun
                 }
 
                 // Append content to the buffer
-                requestContext
-                    .contentBuffer
-                    .append(msg.content().toString(Charsets.UTF_8))
+                msg.content().readBytes(requestContext.contentBuffer, msg.content().readableBytes())
 
                 // If this is the last content, process the request
                 if (msg is LastHttpContent) {

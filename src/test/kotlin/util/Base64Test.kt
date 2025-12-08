@@ -20,7 +20,9 @@ class Base64Test {
 
         val expectedBase64 = Base64.getEncoder().encodeToString(content)
         assertEquals(expectedBase64, resultBase64)
-        Files.deleteIfExists(tempFile)
+        try {
+            Files.deleteIfExists(tempFile)
+        } catch (e: java.nio.file.AccessDeniedException) {}
     }
 
 }
