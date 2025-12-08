@@ -22,12 +22,12 @@ package net.ccbluex.netty.http.rest
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
 import io.netty.handler.codec.http.DefaultFullHttpResponse
+import io.netty.handler.codec.http.DefaultHttpHeaders
 import io.netty.handler.codec.http.EmptyHttpHeaders
 import io.netty.handler.codec.http.FullHttpResponse
 import io.netty.handler.codec.http.HttpHeaderNames
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.HttpVersion
-import io.netty.handler.codec.http.ReadOnlyHttpHeaders
 import net.ccbluex.netty.http.util.httpNotFound
 import net.ccbluex.netty.http.model.RequestObject
 import org.apache.tika.Tika
@@ -59,19 +59,15 @@ class ZipServant(part: String, zipInputStream: InputStream) : Node(part) {
         val data: ByteBuf,
         val isDirectory: Boolean,
     ) {
-        private val headers =
-            ReadOnlyHttpHeaders(
-                false,
-                HttpHeaderNames.CONTENT_TYPE, tika.detect(name),
-                HttpHeaderNames.CONTENT_LENGTH, data.readableBytes().toString(),
-            )
-
         fun toResponse(): FullHttpResponse {
             return DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1,
                 HttpResponseStatus.OK,
-                data.duplicate(),
-                headers,
+                data.retainedDuplicate(),
+                DefaultHttpHeaders().apply {
+                    this[HttpHeaderNames.CONTENT_TYPE] = tika.detect(name)
+                    this[HttpHeaderNames.CONTENT_LENGTH] = data.readableBytes().toString()
+                },
                 EmptyHttpHeaders.INSTANCE,
             )
         }
