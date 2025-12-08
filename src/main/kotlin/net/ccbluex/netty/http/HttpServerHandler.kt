@@ -26,9 +26,16 @@ import io.netty.handler.codec.http.HttpHeaderNames
 import io.netty.handler.codec.http.HttpRequest
 import io.netty.handler.codec.http.LastHttpContent
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import net.ccbluex.netty.http.HttpServer.Companion.logger
 import net.ccbluex.netty.http.middleware.Middleware
 import net.ccbluex.netty.http.model.RequestContext
+import net.ccbluex.netty.http.util.forEachIsInstance
 import net.ccbluex.netty.http.websocket.WebSocketHandler
 import java.net.URLDecoder
 
@@ -40,12 +47,36 @@ import java.net.URLDecoder
 internal class HttpServerHandler(private val server: HttpServer) : ChannelInboundHandlerAdapter() {
 
     private val localRequestContext = ThreadLocal<RequestContext>()
+    private lateinit var channelScope: CoroutineScope
 
     /**
      * Extension property to get the WebSocket URL from an HttpRequest.
      */
     private val HttpRequest.webSocketUrl: String
         get() = "ws://${headers().get("Host")}${uri()}"
+
+    /**
+     * Adds the [CoroutineScope] of current [io.netty.channel.Channel].
+     */
+    override fun handlerAdded(ctx: ChannelHandlerContext) {
+        super.handlerAdded(ctx)
+
+        val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+            val ctxName = ctx.name()
+            val channelId = ctx.channel().id().asLongText()
+            logger.error(
+                "Uncaught coroutine error in [ctx: $ctxName, channel: $channelId]",
+                throwable
+            )
+        }
+
+        channelScope = CoroutineScope(
+            ctx.channel().eventLoop().asCoroutineDispatcher()
+                    + CoroutineName("${ctx.name()}#${ctx.channel().id().asShortText()}")
+                    + exceptionHandler
+        )
+        ctx.channel().closeFuture().addListener { channelScope.cancel() }
+    }
 
     /**
      * Reads the incoming messages and processes HTTP requests.
@@ -68,11 +99,11 @@ internal class HttpServerHandler(private val server: HttpServer) : ChannelInboun
                 if (connection.equals("Upgrade", ignoreCase = true) &&
                     upgrade.equals("WebSocket", ignoreCase = true)) {
 
-                    server.middlewares.filterIsInstance<Middleware.OnWebSocketUpgrade>().forEach { middleware ->
+                    server.middlewares.forEachIsInstance<Middleware.OnWebSocketUpgrade> { middleware ->
                         val response = middleware.invoke(ctx, msg)
                         if (response != null) {
                             ctx.writeAndFlush(response)
-                            return
+                            return super.channelRead(ctx, msg)
                         }
                     }
 
@@ -99,7 +130,7 @@ internal class HttpServerHandler(private val server: HttpServer) : ChannelInboun
                         URLDecoder.decode(msg.uri(), Charsets.UTF_8),
                         msg.headers(),
                     )
-                    
+
                     localRequestContext.set(requestContext)
                 }
             }
@@ -107,7 +138,7 @@ internal class HttpServerHandler(private val server: HttpServer) : ChannelInboun
             is HttpContent -> {
                 val requestContext = localRequestContext.get() ?: run {
                     logger.warn("Received HttpContent without HttpRequest")
-                    return
+                    return super.channelRead(ctx, msg)
                 }
 
                 // Append content to the buffer
@@ -117,18 +148,21 @@ internal class HttpServerHandler(private val server: HttpServer) : ChannelInboun
                 if (msg is LastHttpContent) {
                     localRequestContext.remove()
 
-                    server.middlewares.filterIsInstance<Middleware.OnRequest>().forEach { middleware ->
+                    server.middlewares.forEachIsInstance<Middleware.OnRequest> { middleware ->
                         val response = middleware.invoke(requestContext)
                         if (response != null) {
                             ctx.writeAndFlush(response)
-                            return
+                            return super.channelRead(ctx, msg)
                         }
                     }
-                    var response = server.processRequestContext(requestContext)
-                    server.middlewares.filterIsInstance<Middleware.OnResponse>().forEach { middleware ->
-                        response = middleware.invoke(requestContext, response)
+
+                    channelScope.launch {
+                        var response = server.processRequestContext(requestContext)
+                        server.middlewares.forEachIsInstance<Middleware.OnResponse> { middleware ->
+                            response = middleware.invoke(requestContext, response)
+                        }
+                        ctx.writeAndFlush(response)
                     }
-                    ctx.writeAndFlush(response)
                 }
             }
 
