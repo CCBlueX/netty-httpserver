@@ -31,8 +31,10 @@ dependencies {
     api(libs.bundles.netty)
     api(libs.gson)
     api(libs.tika.core)
+    api(libs.coroutines.core)
 
     testImplementation(kotlin("test"))
+    testImplementation(libs.coroutines.test)
     testImplementation("com.squareup.retrofit2:retrofit:2.9.0")
     testImplementation("com.squareup.retrofit2:converter-gson:2.9.0")
 }
