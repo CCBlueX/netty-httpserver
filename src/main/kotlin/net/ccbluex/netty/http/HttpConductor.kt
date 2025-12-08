@@ -65,7 +65,7 @@ internal fun HttpServer.processRequestContext(context: RequestContext) = runCatc
         headers = context.headers
     )
 
-    return@runCatching node.handleRequest(requestObject)
+    return@runCatching node.handle(requestObject)
 }.getOrElse {
     logger.error("Error while processing request object: $context", it)
     httpInternalServerError(it.message ?: "Unknown error")

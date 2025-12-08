@@ -113,7 +113,7 @@ class ZipServantTest {
         val zipData = createTestZip()
         val zipServant = ZipServant("static", zipData.inputStream())
 
-        val response = zipServant.handleRequest(createRequestObject(""))
+        val response = zipServant.handle(createRequestObject(""))
 
         assertEquals(HttpResponseStatus.OK, response.status())
         assertTrue(response.headers().get("Content-Type").startsWith("text/html"))
@@ -127,7 +127,7 @@ class ZipServantTest {
         val zipData = createTestZip()
         val zipServant = ZipServant("static", zipData.inputStream())
 
-        val response = zipServant.handleRequest(createRequestObject("/"))
+        val response = zipServant.handle(createRequestObject("/"))
 
         assertEquals(HttpResponseStatus.OK, response.status())
         assertTrue(response.headers().get("Content-Type").startsWith("text/html"))
@@ -139,24 +139,24 @@ class ZipServantTest {
         val zipServant = ZipServant("static", zipData.inputStream())
 
         // Test JavaScript file
-        val jsResponse = zipServant.handleRequest(createRequestObject("/assets/app.js"))
+        val jsResponse = zipServant.handle(createRequestObject("/assets/app.js"))
         assertEquals(HttpResponseStatus.OK, jsResponse.status())
-        assertEquals("application/javascript", jsResponse.headers().get("Content-Type"))
+        assertEquals("text/javascript", jsResponse.headers().get("Content-Type"))
         val jsContent = jsResponse.content().toString(StandardCharsets.UTF_8)
         assertTrue(jsContent.contains("console.log"))
 
         // Test CSS file
-        val cssResponse = zipServant.handleRequest(createRequestObject("/assets/style.css"))
+        val cssResponse = zipServant.handle(createRequestObject("/assets/style.css"))
         assertEquals(HttpResponseStatus.OK, cssResponse.status())
         assertEquals("text/css", cssResponse.headers().get("Content-Type"))
 
         // Test JSON file
-        val jsonResponse = zipServant.handleRequest(createRequestObject("/metadata.json"))
+        val jsonResponse = zipServant.handle(createRequestObject("/metadata.json"))
         assertEquals(HttpResponseStatus.OK, jsonResponse.status())
         assertEquals("application/json", jsonResponse.headers().get("Content-Type"))
 
         // Test PNG file
-        val pngResponse = zipServant.handleRequest(createRequestObject("/images/test.png"))
+        val pngResponse = zipServant.handle(createRequestObject("/images/test.png"))
         assertEquals(HttpResponseStatus.OK, pngResponse.status())
         assertEquals("image/png", pngResponse.headers().get("Content-Type"))
     }
@@ -166,10 +166,10 @@ class ZipServantTest {
         val zipData = createTestZip()
         val zipServant = ZipServant("static", zipData.inputStream())
 
-        val response = zipServant.handleRequest(createRequestObject("/components/component.js"))
+        val response = zipServant.handle(createRequestObject("/components/component.js"))
 
         assertEquals(HttpResponseStatus.OK, response.status())
-        assertEquals("application/javascript", response.headers().get("Content-Type"))
+        assertEquals("text/javascript", response.headers().get("Content-Type"))
         val content = response.content().toString(StandardCharsets.UTF_8)
         assertTrue(content.contains("export default"))
     }
@@ -179,7 +179,7 @@ class ZipServantTest {
         val zipData = createTestZip()
         val zipServant = ZipServant("static", zipData.inputStream())
 
-        val response = zipServant.handleRequest(createRequestObject("/non-existent.txt"))
+        val response = zipServant.handle(createRequestObject("/non-existent.txt"))
 
         assertEquals(HttpResponseStatus.NOT_FOUND, response.status())
     }
@@ -189,7 +189,7 @@ class ZipServantTest {
         val zipData = createTestZip()
         val zipServant = ZipServant("static", zipData.inputStream())
 
-        val response = zipServant.handleRequest(createRequestObject("/../../../etc/passwd"))
+        val response = zipServant.handle(createRequestObject("/../../../etc/passwd"))
 
         assertEquals(HttpResponseStatus.NOT_FOUND, response.status())
     }
@@ -199,7 +199,7 @@ class ZipServantTest {
         val zipData = createTestZip()
         val zipServant = ZipServant("static", zipData.inputStream())
 
-        val response = zipServant.handleRequest(createRequestObject("metadata.json"))
+        val response = zipServant.handle(createRequestObject("metadata.json"))
 
         assertEquals(HttpResponseStatus.OK, response.status())
         assertEquals("application/json", response.headers().get("Content-Type"))
@@ -211,7 +211,7 @@ class ZipServantTest {
         val zipServant = ZipServant("static", zipData.inputStream())
 
         // Test that root path serves index.html (which is the typical SPA behavior)
-        val response = zipServant.handleRequest(createRequestObject(""))
+        val response = zipServant.handle(createRequestObject(""))
 
         // Should serve index.html for root requests (SPA behavior)
         assertEquals(HttpResponseStatus.OK, response.status())
@@ -228,7 +228,7 @@ class ZipServantTest {
         }
 
         val zipServant = ZipServant("static", baos.toByteArray().inputStream())
-        val response = zipServant.handleRequest(createRequestObject("/test.unknown"))
+        val response = zipServant.handle(createRequestObject("/test.unknown"))
 
         assertEquals(HttpResponseStatus.OK, response.status())
         assertEquals("application/octet-stream", response.headers().get("Content-Type"))
@@ -256,7 +256,7 @@ class ZipServantTest {
         val zipServant = ZipServant("static", baos.toByteArray().inputStream())
 
         // Test some key content types that we know Tika should detect correctly
-        val response = zipServant.handleRequest(createRequestObject("/test.js"))
+        val response = zipServant.handle(createRequestObject("/test.js"))
         assertEquals(HttpResponseStatus.OK, response.status())
         // Tika should detect JavaScript files correctly
         assertTrue(
@@ -265,14 +265,14 @@ class ZipServantTest {
             "JavaScript file should have appropriate content type, got: ${response.headers().get("Content-Type")}"
         )
 
-        val cssResponse = zipServant.handleRequest(createRequestObject("/test.css"))
+        val cssResponse = zipServant.handle(createRequestObject("/test.css"))
         assertEquals(HttpResponseStatus.OK, cssResponse.status())
         assertTrue(
             cssResponse.headers().get("Content-Type").contains("css"),
             "CSS file should have appropriate content type, got: ${cssResponse.headers().get("Content-Type")}"
         )
 
-        val htmlResponse = zipServant.handleRequest(createRequestObject("/test.html"))
+        val htmlResponse = zipServant.handle(createRequestObject("/test.html"))
         assertEquals(HttpResponseStatus.OK, htmlResponse.status())
         assertTrue(
             htmlResponse.headers().get("Content-Type").contains("html"),
@@ -286,7 +286,7 @@ class ZipServantTest {
         ZipOutputStream(baos).use { /* empty zip */ }
 
         val zipServant = ZipServant("static", baos.toByteArray().inputStream())
-        val response = zipServant.handleRequest(createRequestObject("/"))
+        val response = zipServant.handle(createRequestObject("/"))
 
         assertEquals(HttpResponseStatus.NOT_FOUND, response.status())
     }
@@ -297,14 +297,14 @@ class ZipServantTest {
         val zipServant = ZipServant("static", zipData.inputStream())
 
         // Test accessing admin/ directory - should serve admin/index.html
-        val adminResponse = zipServant.handleRequest(createRequestObject("/admin/"))
+        val adminResponse = zipServant.handle(createRequestObject("/admin/"))
         assertEquals(HttpResponseStatus.OK, adminResponse.status())
         assertTrue(adminResponse.headers().get("Content-Type").startsWith("text/html"))
         val adminContent = adminResponse.content().toString(StandardCharsets.UTF_8)
         assertTrue(adminContent.contains("Admin SPA"))
 
         // Test accessing test/ directory - should serve test/index.html
-        val testResponse = zipServant.handleRequest(createRequestObject("/test/"))
+        val testResponse = zipServant.handle(createRequestObject("/test/"))
         assertEquals(HttpResponseStatus.OK, testResponse.status())
         assertTrue(testResponse.headers().get("Content-Type").startsWith("text/html"))
         val testContent = testResponse.content().toString(StandardCharsets.UTF_8)
@@ -317,21 +317,21 @@ class ZipServantTest {
         val zipServant = ZipServant("static", zipData.inputStream())
 
         // Test SPA route with fragment in root
-        val rootSpaResponse = zipServant.handleRequest(createRequestObject("/#/dashboard"))
+        val rootSpaResponse = zipServant.handle(createRequestObject("/#/dashboard"))
         assertEquals(HttpResponseStatus.OK, rootSpaResponse.status())
         assertTrue(rootSpaResponse.headers().get("Content-Type").startsWith("text/html"))
         val rootContent = rootSpaResponse.content().toString(StandardCharsets.UTF_8)
         assertTrue(rootContent.contains("Root SPA"))
 
         // Test SPA route with fragment in subdirectory
-        val adminSpaResponse = zipServant.handleRequest(createRequestObject("/admin/#/users"))
+        val adminSpaResponse = zipServant.handle(createRequestObject("/admin/#/users"))
         assertEquals(HttpResponseStatus.OK, adminSpaResponse.status())
         assertTrue(adminSpaResponse.headers().get("Content-Type").startsWith("text/html"))
         val adminContent = adminSpaResponse.content().toString(StandardCharsets.UTF_8)
         assertTrue(adminContent.contains("Admin SPA"))
 
         // Test SPA route with fragment in test directory
-        val testSpaResponse = zipServant.handleRequest(createRequestObject("/test/#/settings"))
+        val testSpaResponse = zipServant.handle(createRequestObject("/test/#/settings"))
         assertEquals(HttpResponseStatus.OK, testSpaResponse.status())
         assertTrue(testSpaResponse.headers().get("Content-Type").startsWith("text/html"))
         val testContent = testSpaResponse.content().toString(StandardCharsets.UTF_8)
@@ -344,14 +344,14 @@ class ZipServantTest {
         val zipServant = ZipServant("static", zipData.inputStream())
 
         // Test accessing admin directory without trailing slash - should serve admin/index.html
-        val adminResponse = zipServant.handleRequest(createRequestObject("/admin"))
+        val adminResponse = zipServant.handle(createRequestObject("/admin"))
         assertEquals(HttpResponseStatus.OK, adminResponse.status())
         assertTrue(adminResponse.headers().get("Content-Type").startsWith("text/html"))
         val adminContent = adminResponse.content().toString(StandardCharsets.UTF_8)
         assertTrue(adminContent.contains("Admin SPA"))
 
         // Test accessing test directory without trailing slash - should serve test/index.html
-        val testResponse = zipServant.handleRequest(createRequestObject("/test"))
+        val testResponse = zipServant.handle(createRequestObject("/test"))
         assertEquals(HttpResponseStatus.OK, testResponse.status())
         assertTrue(testResponse.headers().get("Content-Type").startsWith("text/html"))
         val testContent = testResponse.content().toString(StandardCharsets.UTF_8)
@@ -364,11 +364,11 @@ class ZipServantTest {
         val zipServant = ZipServant("static", zipData.inputStream())
 
         // Test accessing assets directory (which has no index.html) - should return 404
-        val assetsResponse = zipServant.handleRequest(createRequestObject("/assets/"))
+        val assetsResponse = zipServant.handle(createRequestObject("/assets/"))
         assertEquals(HttpResponseStatus.NOT_FOUND, assetsResponse.status())
 
         // Test accessing assets directory without trailing slash - should return 404
-        val assetsResponse2 = zipServant.handleRequest(createRequestObject("/assets"))
+        val assetsResponse2 = zipServant.handle(createRequestObject("/assets"))
         assertEquals(HttpResponseStatus.NOT_FOUND, assetsResponse2.status())
     }
 }
