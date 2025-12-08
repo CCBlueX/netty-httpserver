@@ -65,13 +65,14 @@ class HttpServer {
      * Starts the Netty server on the specified port.
      *
      * @param port The port of HTTP server. `0` means to auto select one.
+     * @param useNativeTransport Whether to use native transport (Epoll or KQueue).
      *
      * @return actual port of server.
      */
-    fun start(port: Int): Int = lock.withLock {
+    fun start(port: Int, useNativeTransport: Boolean = true): Int = lock.withLock {
         val b = ServerBootstrap()
 
-        val groups = TransportType.apply(b)
+        val groups = TransportType.apply(b, useNativeTransport)
         bossGroup = groups.first
         workerGroup = groups.second
 

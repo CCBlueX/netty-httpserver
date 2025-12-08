@@ -20,6 +20,7 @@
 package net.ccbluex.netty.http.util
 
 import io.netty.bootstrap.ServerBootstrap
+import io.netty.channel.ChannelFactory
 import io.netty.channel.EventLoopGroup
 import io.netty.channel.ServerChannel
 import io.netty.channel.epoll.EpollEventLoopGroup
@@ -81,13 +82,17 @@ internal sealed interface TransportType {
          * Set the channel factory and event loop groups for the given server bootstrap.
          *
          * @param bootstrap The server bootstrap to configure.
+         * @param useNativeTransport Whether to use native transport (Epoll or KQueue).
+         *
          * @return Parent and child group.
          */
-        fun apply(bootstrap: ServerBootstrap): Pair<EventLoopGroup, EventLoopGroup> {
-            val parentGroup = available.newParentGroup()
-            val childGroup = available.newChildGroup()
+        fun apply(bootstrap: ServerBootstrap, useNativeTransport: Boolean): Pair<EventLoopGroup, EventLoopGroup> {
+            val type = if (useNativeTransport) available else Nio
+
+            val parentGroup = type.newParentGroup()
+            val childGroup = type.newChildGroup()
             bootstrap.group(parentGroup, childGroup)
-                .channelFactory(available::newServerChannel)
+                .channelFactory(ChannelFactory(type::newServerChannel))
             return parentGroup to childGroup
         }
     }
