@@ -7,8 +7,12 @@ netty = "4.1.118.Final"
 gson = "2.10.1"
 # https://mvnrepository.com/artifact/org.apache.tika/tika-core
 tika = "3.2.3"
+# https://central.sonatype.com/artifact/org.jetbrains.kotlinx/kotlinx-coroutines-test/overview
+kotlinx_coroutines_version = "1.10.2"
 
 [libraries]
+coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx_coroutines_version" }
+coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx_coroutines_version" }
 log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
 netty-codec-http = { module = "io.netty:netty-codec-http", version.ref = "netty" }
 netty-kqueue-classes = { module = "io.netty:netty-transport-classes-kqueue", version.ref = "netty" }
