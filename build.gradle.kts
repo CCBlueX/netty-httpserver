@@ -27,14 +27,10 @@ kotlin {
 }
 
 dependencies {
-    // https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core
-    implementation("org.apache.logging.log4j:log4j-core:2.23.1")
-    // https://mvnrepository.com/artifact/io.netty/netty-all
-    implementation("io.netty:netty-all:4.1.115.Final")
-    // https://mvnrepository.com/artifact/com.google.code.gson/gson
-    implementation("com.google.code.gson:gson:2.10.1")
-    // https://mvnrepository.com/artifact/org.apache.tika/tika-core
-    implementation("org.apache.tika:tika-core:2.9.2")
+    api(libs.log4j.core)
+    api(libs.bundles.netty)
+    api(libs.gson)
+    api(libs.tika.core)
 
     testImplementation(kotlin("test"))
     testImplementation("com.squareup.retrofit2:retrofit:2.9.0")

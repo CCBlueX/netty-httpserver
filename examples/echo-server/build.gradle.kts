@@ -19,16 +19,7 @@ kotlin {
 }
 
 dependencies {
-    implementation(project(":"))
-
-    // https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core
-    implementation("org.apache.logging.log4j:log4j-core:2.23.1")
-    // https://mvnrepository.com/artifact/io.netty/netty-all
-    implementation("io.netty:netty-all:4.1.82.Final")
-    // https://mvnrepository.com/artifact/com.google.code.gson/gson
-    implementation("com.google.code.gson:gson:2.10.1")
-    // https://mvnrepository.com/artifact/org.apache.tika/tika-core
-    implementation("org.apache.tika:tika-core:2.9.2")
+    implementation(rootProject)
 }
 
 application {

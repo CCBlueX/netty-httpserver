@@ -1,0 +1,24 @@
+[versions]
+# https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core
+log4j = "2.23.1"
+# https://mvnrepository.com/artifact/io.netty/netty-all
+netty = "4.1.118.Final"
+# https://mvnrepository.com/artifact/com.google.code.gson/gson
+gson = "2.10.1"
+# https://mvnrepository.com/artifact/org.apache.tika/tika-core
+tika = "3.2.3"
+
+[libraries]
+log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
+netty-codec-http = { module = "io.netty:netty-codec-http", version.ref = "netty" }
+netty-kqueue-classes = { module = "io.netty:netty-transport-classes-kqueue", version.ref = "netty" }
+netty-epoll-classes = { module = "io.netty:netty-transport-classes-epoll", version.ref = "netty" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+tika-core = { module = "org.apache.tika:tika-core", version.ref = "tika" }
+
+[bundles]
+netty = [
+    "netty-codec-http",
+    "netty-kqueue-classes",
+    "netty-epoll-classes"
+]
