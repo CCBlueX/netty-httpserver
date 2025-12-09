@@ -30,16 +30,8 @@ import io.netty.channel.kqueue.KQueueServerSocketChannel
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioServerSocketChannel
 
-internal sealed interface TransportType {
-    val isAvailable: Boolean
-
-    fun newParentGroup(): EventLoopGroup
-
-    fun newChildGroup(): EventLoopGroup
-
-    fun newServerChannel(): ServerChannel
-
-    object Nio : TransportType {
+internal enum class TransportType {
+    Nio {
         override val isAvailable get() = true
 
         override fun newParentGroup() = NioEventLoopGroup(1)
@@ -47,31 +39,39 @@ internal sealed interface TransportType {
         override fun newChildGroup() = NioEventLoopGroup()
 
         override fun newServerChannel() = NioServerSocketChannel()
-    }
+    },
 
-    object Epoll : TransportType {
+    Epoll {
         override val isAvailable get() = try {
             io.netty.channel.epoll.Epoll.isAvailable()
-        } catch (t: Throwable) { false }
+        } catch (_: Throwable) { false }
 
         override fun newParentGroup() = EpollEventLoopGroup(1)
 
         override fun newChildGroup() = EpollEventLoopGroup()
 
         override fun newServerChannel() = EpollServerSocketChannel()
-    }
+    },
 
-    object KQueue : TransportType {
+    KQueue {
         override val isAvailable get() = try {
             io.netty.channel.kqueue.KQueue.isAvailable()
-        } catch (t: Throwable) { false }
+        } catch (_: Throwable) { false }
 
         override fun newParentGroup() = KQueueEventLoopGroup(1)
 
         override fun newChildGroup() = KQueueEventLoopGroup()
 
         override fun newServerChannel() = KQueueServerSocketChannel()
-    }
+    };
+
+    abstract val isAvailable: Boolean
+
+    abstract fun newParentGroup(): EventLoopGroup
+
+    abstract fun newChildGroup(): EventLoopGroup
+
+    abstract fun newServerChannel(): ServerChannel
 
     companion object {
         private val available by lazy {
