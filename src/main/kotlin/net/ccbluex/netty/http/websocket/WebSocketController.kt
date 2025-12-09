@@ -22,6 +22,7 @@ package net.ccbluex.netty.http.websocket
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.function.BiConsumer
 
 /**
  * Controller for handling websocket connections.
@@ -38,15 +39,18 @@ class WebSocketController {
      * Broadcasts a message to all connected clients.
      *
      * @param text The message to broadcast.
-     * @param failure The action to take if a failure occurs.
+     * @param onFailure The action to take if a failure occurs.
      */
-    fun broadcast(text: String, failure: (ChannelHandlerContext, Throwable) -> Unit = { _, _ -> }) {
+    fun broadcast(text: String, onFailure: BiConsumer<ChannelHandlerContext, Throwable>? = null) {
         val frame = TextWebSocketFrame(text)
-        activeContexts.forEach { handlerContext ->
-            try {
-                handlerContext.channel().writeAndFlush(frame.retainedDuplicate())
-            } catch (e: Throwable) {
-                failure(handlerContext, e)
+        for (handlerContext in activeContexts) {
+            val channelFuture = handlerContext.channel().writeAndFlush(frame.retainedDuplicate())
+            if (onFailure != null) {
+                channelFuture.addListener {
+                    if (!it.isSuccess) {
+                        onFailure.accept(handlerContext, it.cause())
+                    }
+                }
             }
         }
         frame.release()
