@@ -135,7 +135,7 @@ open class Node(val part: String) : RequestHandler {
      * @param request The request object.
      * @return The HTTP response.
      */
-    override fun handle(request: RequestObject): FullHttpResponse = throw NotImplementedError()
+    override suspend fun handle(request: RequestObject): FullHttpResponse = throw NotImplementedError()
 
     /**
      * Checks if the node matches a part of the path and HTTP method.

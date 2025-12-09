@@ -11,7 +11,7 @@ val authorName = "ccbluex"
 val projectUrl = "https://github.com/ccbluex/netty-httpserver"
 
 group = "net.ccbluex"
-version = "2.4.2"
+version = "2.4.3-alpha.1"
 
 repositories {
     mavenCentral()
@@ -31,8 +31,10 @@ dependencies {
     api(libs.bundles.netty)
     api(libs.gson)
     api(libs.tika.core)
+    api(libs.coroutines.core)
 
     testImplementation(kotlin("test"))
+    testImplementation(libs.coroutines.test)
     testImplementation("com.squareup.retrofit2:retrofit:2.9.0")
     testImplementation("com.squareup.retrofit2:converter-gson:2.9.0")
 }

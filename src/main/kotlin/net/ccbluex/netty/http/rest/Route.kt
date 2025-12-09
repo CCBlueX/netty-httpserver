@@ -33,7 +33,7 @@ import net.ccbluex.netty.http.model.RequestObject
 open class Route(name: String, private val method: HttpMethod, val handler: RequestHandler)
     : Node(name) {
     override val isExecutable = true
-    override fun handle(request: RequestObject) = handler.handle(request)
+    override suspend fun handle(request: RequestObject) = handler.handle(request)
     override fun matchesMethod(method: HttpMethod) =
         this.method == method && super.matchesMethod(method)
 
