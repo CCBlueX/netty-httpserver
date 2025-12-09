@@ -19,21 +19,41 @@
  */
 package net.ccbluex.netty.http.websocket
 
+import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame
-import java.util.concurrent.CopyOnWriteArrayList
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
+import net.ccbluex.netty.http.coroutines.awaitSuspend
+import net.ccbluex.netty.http.coroutines.syncSuspend
+import java.util.concurrent.CopyOnWriteArraySet
 import java.util.function.BiConsumer
 
 /**
  * Controller for handling websocket connections.
  */
-class WebSocketController {
+class WebSocketController(
+    private val serverChannel: Channel,
+) {
+
+    private val scope = CoroutineScope(
+        serverChannel.eventLoop().asCoroutineDispatcher() + SupervisorJob()
+    )
+
+    init {
+        serverChannel.closeFuture().addListener { scope.cancel("Channel closed") }
+    }
 
     /**
      * Keeps track of all connected websocket connections to the server.
      * This is used to broadcast messages to all connected clients.
      */
-    private val activeContexts = CopyOnWriteArrayList<ChannelHandlerContext>()
+    private val activeContexts = CopyOnWriteArraySet<ChannelHandlerContext>()
 
     /**
      * Broadcasts a message to all connected clients.
@@ -41,20 +61,24 @@ class WebSocketController {
      * @param text The message to broadcast.
      * @param onFailure The action to take if a failure occurs.
      */
-    fun broadcast(text: String, onFailure: BiConsumer<ChannelHandlerContext, Throwable>? = null) {
-        val frame = TextWebSocketFrame(text)
-        for (handlerContext in activeContexts) {
-            val channelFuture = handlerContext.channel().writeAndFlush(frame.retainedDuplicate())
-            if (onFailure != null) {
-                channelFuture.addListener {
-                    if (!it.isSuccess) {
-                        onFailure.accept(handlerContext, it.cause())
+    fun broadcast(text: String, onFailure: BiConsumer<ChannelHandlerContext, Throwable>? = null): Job =
+        scope.launch {
+            val frame = TextWebSocketFrame(text)
+
+            activeContexts.map { handlerContext ->
+                launch {
+                    try {
+                        handlerContext.channel()
+                            .writeAndFlush(frame.retainedDuplicate())
+                            .syncSuspend()
+                    } catch (e: Exception) {
+                        onFailure?.accept(handlerContext, e)
                     }
                 }
-            }
+            }.joinAll()
+
+            frame.release()
         }
-        frame.release()
-    }
 
     /**
      * Closes all active contexts.
@@ -74,6 +98,9 @@ class WebSocketController {
      */
     fun addContext(context: ChannelHandlerContext) {
         activeContexts.add(context)
+        context.channel().closeFuture().addListener {
+            removeContext(context)
+        }
     }
 
     /**

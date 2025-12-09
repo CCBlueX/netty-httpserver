@@ -75,7 +75,7 @@ internal class HttpServerHandler(private val server: HttpServer) : ChannelInboun
                     + CoroutineName("${ctx.name()}#${ctx.channel().id().asShortText()}")
                     + exceptionHandler
         )
-        ctx.channel().closeFuture().addListener { channelScope.cancel() }
+        ctx.channel().closeFuture().addListener { channelScope.cancel("Channel closed") }
     }
 
     /**
@@ -123,7 +123,7 @@ internal class HttpServerHandler(private val server: HttpServer) : ChannelInboun
                         handshaker.handshake(ctx.channel(), msg)
                     }
 
-                    server.webSocketController.addContext(ctx)
+                    server.webSocketController!!.addContext(ctx)
                 } else {
                     val requestContext = RequestContext(
                         msg.method(),

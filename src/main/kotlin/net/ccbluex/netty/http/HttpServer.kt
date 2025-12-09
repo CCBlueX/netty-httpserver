@@ -25,14 +25,16 @@ import io.netty.channel.ChannelOption
 import io.netty.channel.EventLoopGroup
 import io.netty.handler.logging.LogLevel
 import io.netty.handler.logging.LoggingHandler
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import net.ccbluex.netty.http.coroutines.awaitSuspend
+import net.ccbluex.netty.http.coroutines.syncSuspend
 import net.ccbluex.netty.http.middleware.Middleware
 import net.ccbluex.netty.http.rest.RouteController
 import net.ccbluex.netty.http.util.TransportType
 import net.ccbluex.netty.http.websocket.WebSocketController
 import org.apache.logging.log4j.LogManager
 import java.net.InetSocketAddress
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
 
 
 /**
@@ -43,15 +45,16 @@ import kotlin.concurrent.withLock
 class HttpServer {
 
     val routeController = RouteController()
-    val webSocketController = WebSocketController()
 
-    private val lock = ReentrantLock()
+    private val lock = Mutex()
 
     internal val middlewares = mutableListOf<Middleware>()
 
     private var bossGroup: EventLoopGroup? = null
     private var workerGroup: EventLoopGroup? = null
     private var serverChannel: Channel? = null
+    var webSocketController: WebSocketController? = null
+        private set
 
     companion object {
         internal val logger = LogManager.getLogger("HttpServer")
@@ -69,7 +72,7 @@ class HttpServer {
      *
      * @return actual port of server.
      */
-    fun start(port: Int, useNativeTransport: Boolean = true): Int = lock.withLock {
+    suspend fun start(port: Int, useNativeTransport: Boolean = true): Int = lock.withLock {
         val b = ServerBootstrap()
 
         val groups = TransportType.apply(b, useNativeTransport)
@@ -81,8 +84,9 @@ class HttpServer {
             b.option(ChannelOption.SO_BACKLOG, 1024)
                 .handler(LoggingHandler(LogLevel.INFO))
                 .childHandler(HttpChannelInitializer(this))
-            val ch = b.bind(port).sync().channel()
+            val ch = b.bind(port).syncSuspend().channel()
             serverChannel = ch
+            webSocketController = WebSocketController(ch)
 
             logger.info("Netty server started on port $port.")
 
@@ -98,12 +102,13 @@ class HttpServer {
     /**
      * Stops the Netty server gracefully.
      */
-    fun stop() = lock.withLock {
+    suspend fun stop() = lock.withLock {
         logger.info("Shutting down Netty server...")
         try {
-            serverChannel?.close()?.sync()
-            bossGroup?.shutdownGracefully()?.sync()
-            workerGroup?.shutdownGracefully()?.sync()
+            webSocketController?.disconnect()
+            serverChannel?.close()?.awaitSuspend()
+            bossGroup?.shutdownGracefully()?.awaitSuspend()
+            workerGroup?.shutdownGracefully()?.awaitSuspend()
         } catch (e: Exception) {
             logger.warn("Error during shutdown", e)
         } finally {
