@@ -4,10 +4,10 @@ import net.ccbluex.netty.http.HttpServer
 import net.ccbluex.netty.http.model.RequestObject
 import net.ccbluex.netty.http.util.httpOk
 
-fun main() {
+suspend fun main() {
     val server = HttpServer()
 
-    server.routeController.apply {
+    server.routing {
         get("/", ::getRoot)
         get("/hello", ::getHello) // /hello?name=World
         get("/hello/:name", ::getHello) // /hello/World

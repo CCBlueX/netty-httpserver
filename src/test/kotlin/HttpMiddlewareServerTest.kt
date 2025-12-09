@@ -1,6 +1,7 @@
 import com.google.gson.JsonObject
 import io.netty.handler.codec.http.FullHttpResponse
 import io.netty.handler.codec.http.HttpResponseStatus
+import kotlinx.coroutines.runBlocking
 import net.ccbluex.netty.http.HttpServer
 import net.ccbluex.netty.http.middleware.Middleware
 import net.ccbluex.netty.http.model.RequestObject
@@ -50,7 +51,7 @@ class HttpMiddlewareServerTest {
      * It stops the server and deletes the temporary directory.
      */
     @AfterAll
-    fun cleanup() {
+    fun cleanup() = runBlocking {
         server.stop()
     }
 
@@ -58,10 +59,10 @@ class HttpMiddlewareServerTest {
      * This function starts the HTTP server with routing configured for
      * different difficulty levels.
      */
-    private fun startHttpServer(): HttpServer {
+    private fun startHttpServer(): HttpServer = runBlocking {
         val server = HttpServer()
 
-        server.routeController.apply {
+        server.routing {
             get("/", ::static)
         }
 
@@ -81,7 +82,7 @@ class HttpMiddlewareServerTest {
         })
 
         server.start(8080)  // Start the server on port 8080
-        return server
+        server
     }
 
     @Suppress("UNUSED_PARAMETER")

@@ -22,10 +22,10 @@ import net.ccbluex.netty.http.HttpServer
 import net.ccbluex.netty.http.rest.RouteController
 import java.io.File
 
-fun main() {
+suspend fun main() {
     // Start server
     val server = HttpServer()
-    server.routeController.apply {
+    server.routing {
         zip("/static", File("example.zip").inputStream())
     }
 

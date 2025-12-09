@@ -1,5 +1,6 @@
 import com.google.gson.JsonObject
 import io.netty.handler.codec.http.FullHttpResponse
+import kotlinx.coroutines.runBlocking
 import net.ccbluex.netty.http.HttpServer
 import net.ccbluex.netty.http.model.RequestObject
 import net.ccbluex.netty.http.util.httpOk
@@ -55,7 +56,7 @@ class HttpServerTest {
      */
     @AfterAll
     fun cleanup() {
-        server.stop()
+        server.stopBlocking()
         folder.deleteRecursively() // Clean up the temporary folder
     }
 
@@ -63,10 +64,10 @@ class HttpServerTest {
      * This function starts the HTTP server with routing configured for
      * different difficulty levels.
      */
-    private fun startHttpServer(folder: File): HttpServer {
+    private fun startHttpServer(folder: File): HttpServer = runBlocking {
         val server = HttpServer()
 
-        server.routeController.apply {
+        server.routing {
             // Routes with difficulty levels
             get("/a", ::a)
             get("/b", ::b)
@@ -95,7 +96,7 @@ class HttpServerTest {
         }
 
         server.start(8080)  // Start the server on port 8080
-        return server
+        server
     }
 
     @Suppress("UNUSED_PARAMETER")

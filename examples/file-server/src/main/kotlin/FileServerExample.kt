@@ -9,12 +9,12 @@ import java.io.File
 const val FOLDER_NAME = "files"
 val folder = File(FOLDER_NAME)
 
-fun main() {
+suspend fun main() {
     val server = HttpServer()
 
     println("Serving files from: ${folder.absolutePath}")
 
-    server.routeController.apply {
+    server.routing {
         get("/", ::getRoot)
         get("/conflicting", ::getConflictingPath)
         get("/a/b/c", ::getConflictingPath)

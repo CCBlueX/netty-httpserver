@@ -62,10 +62,10 @@ import com.google.gson.JsonObject
 import net.ccbluex.netty.http.HttpServer
 import net.ccbluex.netty.http.util.httpOk
 
-fun main() {
+suspend fun main() {
     val server = HttpServer()
 
-    server.routeController.apply {
+    server.routing {
         get("/hello") {
             httpOk(JsonObject().apply {
                 addProperty("message", "Hello, World!")

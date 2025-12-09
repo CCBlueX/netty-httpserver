@@ -25,11 +25,13 @@ import io.netty.channel.ChannelOption
 import io.netty.channel.EventLoopGroup
 import io.netty.handler.logging.LogLevel
 import io.netty.handler.logging.LoggingHandler
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import net.ccbluex.netty.http.coroutines.awaitSuspend
 import net.ccbluex.netty.http.coroutines.syncSuspend
 import net.ccbluex.netty.http.middleware.Middleware
+import net.ccbluex.netty.http.rest.Node
 import net.ccbluex.netty.http.rest.RouteController
 import net.ccbluex.netty.http.util.TransportType
 import net.ccbluex.netty.http.websocket.WebSocketController
@@ -44,7 +46,7 @@ import java.net.InetSocketAddress
  */
 class HttpServer {
 
-    val routeController = RouteController()
+    internal val routeController = RouteController()
 
     private val lock = Mutex()
 
@@ -62,6 +64,10 @@ class HttpServer {
 
     fun middleware(middleware: Middleware) = apply {
         middlewares += middleware
+    }
+
+    fun routing(block: Node.() -> Unit) {
+        routeController.apply(block)
     }
 
     /**
@@ -117,6 +123,10 @@ class HttpServer {
             workerGroup = null
         }
         logger.info("Netty server stopped.")
+    }
+
+    fun stopBlocking() = runBlocking {
+        stop()
     }
 
 }
