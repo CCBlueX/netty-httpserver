@@ -112,9 +112,9 @@ class HttpMiddlewareServerTest {
     @Test
     fun testRootEndpoint() {
         val response = makeRequest("/")
-        assertEquals(200, response.code(), "Expected status code 200")
+        assertEquals(200, response.code, "Expected status code 200")
 
-        val responseBody = response.body()?.string()
+        val responseBody = response.body?.string()
         assertNotNull(responseBody, "Response body should not be null")
 
         assertTrue(responseBody.contains("Hello, World!"), "Response should contain 'Hello, World!'")
@@ -127,9 +127,9 @@ class HttpMiddlewareServerTest {
     @Test
     fun testRootEndpointWithQueryParam() {
         val response = makeRequest("/?param1=value1&param2=value2")
-        assertEquals(200, response.code(), "Expected status code 200")
+        assertEquals(200, response.code, "Expected status code 200")
 
-        val responseBody = response.body()?.string()
+        val responseBody = response.body?.string()
         assertNotNull(responseBody, "Response body should not be null")
 
         assertTrue(responseBody.contains("Hello, World!"), "Response should contain 'Hello, World!'")
@@ -150,13 +150,13 @@ class HttpMiddlewareServerTest {
                 override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                     assertIs<ProtocolException>(t)
                     assertNotNull(response)
-                    assertEquals(HttpResponseStatus.BAD_REQUEST.code(), response.code())
+                    assertEquals(HttpResponseStatus.BAD_REQUEST.code(), response.code)
                     val exceptedResponseBody = httpBadRequest("WebSocket unsupported")
                     val buffer = Buffer()
                     buffer.write(exceptedResponseBody.content().nioBuffer())
                     assertEquals(
                         buffer.readUtf8(),
-                        response.body()!!.string()
+                        response.body!!.string()
                     )
                     future.complete(true)
                 }

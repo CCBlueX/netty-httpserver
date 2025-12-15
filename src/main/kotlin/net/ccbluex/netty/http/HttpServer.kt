@@ -33,7 +33,7 @@ import net.ccbluex.netty.http.coroutines.syncSuspend
 import net.ccbluex.netty.http.middleware.Middleware
 import net.ccbluex.netty.http.rest.Node
 import net.ccbluex.netty.http.rest.RouteController
-import net.ccbluex.netty.http.util.TransportType
+import net.ccbluex.netty.http.util.setup
 import net.ccbluex.netty.http.websocket.WebSocketController
 import org.apache.logging.log4j.LogManager
 import java.net.InetSocketAddress
@@ -81,7 +81,7 @@ class HttpServer {
     suspend fun start(port: Int, useNativeTransport: Boolean = true): Int = lock.withLock {
         val b = ServerBootstrap()
 
-        val groups = TransportType.apply(b, useNativeTransport)
+        val groups = b.setup(useNativeTransport)
         bossGroup = groups.first
         workerGroup = groups.second
 

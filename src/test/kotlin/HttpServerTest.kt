@@ -156,9 +156,9 @@ class HttpServerTest {
     @Test
     fun testRootEndpoint() {
         val response = makeRequest("/")
-        assertEquals(200, response.code(), "Expected status code 200")
+        assertEquals(200, response.code, "Expected status code 200")
 
-        val responseBody = response.body()?.string()
+        val responseBody = response.body?.string()
         assertNotNull(responseBody, "Response body should not be null")
 
         assertTrue(responseBody.contains("Hello, World!"), "Response should contain 'Hello, World!'")
@@ -170,9 +170,9 @@ class HttpServerTest {
     @Test
     fun testAEndpoint() {
         val response = makeRequest("/a")
-        assertEquals(200, response.code(), "Expected status code 200")
+        assertEquals(200, response.code, "Expected status code 200")
 
-        val responseBody = response.body()?.string()
+        val responseBody = response.body?.string()
         assertNotNull(responseBody, "Response body should not be null")
 
         assertTrue(responseBody.contains("\"char\":\"A\""), "Response should contain char 'A'")
@@ -184,9 +184,9 @@ class HttpServerTest {
     @Test
     fun testBEndpoint() {
         val response = makeRequest("/b")
-        assertEquals(200, response.code(), "Expected status code 200")
+        assertEquals(200, response.code, "Expected status code 200")
 
-        val responseBody = response.body()?.string()
+        val responseBody = response.body?.string()
         assertNotNull(responseBody, "Response body should not be null")
 
         assertTrue(responseBody.contains("\"char\":\"B\""), "Response should contain char 'B'")
@@ -198,9 +198,9 @@ class HttpServerTest {
     @Test
     fun testCEndpoint() {
         val response = makeRequest("/c")
-        assertEquals(200, response.code(), "Expected status code 200")
+        assertEquals(200, response.code, "Expected status code 200")
 
-        val responseBody = response.body()?.string()
+        val responseBody = response.body?.string()
         assertNotNull(responseBody, "Response body should not be null")
 
         assertTrue(responseBody.contains("\"char\":\"C\""), "Response should contain char 'C'")
@@ -212,9 +212,9 @@ class HttpServerTest {
     @Test
     fun testVParamEndpoint() {
         val response = makeRequest("/v/Alice")
-        assertEquals(200, response.code(), "Expected status code 200")
+        assertEquals(200, response.code, "Expected status code 200")
 
-        val responseBody = response.body()?.string()
+        val responseBody = response.body?.string()
         assertNotNull(responseBody, "Response body should not be null")
 
         assertTrue(responseBody.contains("Hello, Alice"), "Response should contain 'Hello, Alice'")
@@ -226,9 +226,9 @@ class HttpServerTest {
     @Test
     fun testRParamsEndpoint() {
         val response = makeRequest("/r/Alice/Bob")
-        assertEquals(200, response.code(), "Expected status code 200")
+        assertEquals(200, response.code, "Expected status code 200")
 
-        val responseBody = response.body()?.string()
+        val responseBody = response.body?.string()
         assertNotNull(responseBody, "Response body should not be null")
 
         assertTrue(responseBody.contains("Hello, Alice and Bob"), "Response should contain 'Hello, Alice and Bob'")
@@ -240,9 +240,9 @@ class HttpServerTest {
     @Test
     fun testOParamsEndpoint() {
         val response = makeRequest("/o/Alice/in/Bob")
-        assertEquals(200, response.code(), "Expected status code 200")
+        assertEquals(200, response.code, "Expected status code 200")
 
-        val responseBody = response.body()?.string()
+        val responseBody = response.body?.string()
         assertNotNull(responseBody, "Response body should not be null")
 
         assertTrue(responseBody.contains("Hello, Alice and Bob"), "Response should contain 'Hello, Alice and Bob'")
@@ -257,9 +257,9 @@ class HttpServerTest {
 
         endpoints.forEach { endpoint ->
             val response = makeRequest(endpoint)
-            assertEquals(200, response.code(), "Expected status code 200 for $endpoint")
+            assertEquals(200, response.code, "Expected status code 200 for $endpoint")
 
-            val responseBody = response.body()?.string()
+            val responseBody = response.body?.string()
             assertNotNull(responseBody, "Response body should not be null for $endpoint")
 
             // Example assertions; adjust according to the expected behavior of each endpoint
@@ -281,9 +281,9 @@ class HttpServerTest {
 
         endpoints.forEach { endpoint ->
             val response = makeRequest(endpoint)
-            assertEquals(200, response.code(), "Expected status code 200 for $endpoint")
+            assertEquals(200, response.code, "Expected status code 200 for $endpoint")
 
-            val responseBody = response.body()?.string()
+            val responseBody = response.body?.string()
             assertNotNull(responseBody, "Response body should not be null for $endpoint")
 
             // Example assertions; adjust according to the expected behavior of each endpoint
@@ -297,7 +297,7 @@ class HttpServerTest {
     @Test
     fun testNonExistentEndpoint() {
         val response = makeRequest("/nonexistent")
-        assertEquals(404, response.code(), "Expected status code 404")
+        assertEquals(404, response.code, "Expected status code 404")
     }
 
     @Test
@@ -311,9 +311,9 @@ class HttpServerTest {
 
         files.forEach { file ->
             val response = makeRequest("$prefix/$file")
-            assertEquals(200, response.code(), "Expected status code 200 for $file")
+            assertEquals(200, response.code, "Expected status code 200 for $file")
 
-            val responseBody = response.body()?.string()
+            val responseBody = response.body?.string()
             assertNotNull(responseBody, "Response body should not be null for $file")
 
             val file = File(folder, file)
@@ -333,9 +333,9 @@ class HttpServerTest {
 
         endpoints.forEach { endpoint ->
             val response = makeRequest(endpoint)
-            assertEquals(200, response.code(), "Expected status code 200 for $endpoint")
+            assertEquals(200, response.code, "Expected status code 200 for $endpoint")
 
-            val responseBody = response.body()?.string()
+            val responseBody = response.body?.string()
             assertNotNull(responseBody, "Response body should not be null for $endpoint")
 
             assertTrue(responseBody.contains("Hello, World!"), "Response should contain 'Hello, World!'")
