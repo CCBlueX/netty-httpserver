@@ -25,6 +25,7 @@ import io.netty.channel.ChannelOption
 import io.netty.channel.EventLoopGroup
 import io.netty.handler.logging.LogLevel
 import io.netty.handler.logging.LoggingHandler
+import io.netty.util.concurrent.DefaultThreadFactory
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -37,6 +38,7 @@ import net.ccbluex.netty.http.util.setup
 import net.ccbluex.netty.http.websocket.WebSocketController
 import org.apache.logging.log4j.LogManager
 import java.net.InetSocketAddress
+import java.util.concurrent.ThreadFactory
 
 
 /**
@@ -75,21 +77,30 @@ class HttpServer {
      *
      * @param port The port of HTTP server. `0` means to auto select one.
      * @param useNativeTransport Whether to use native transport (Epoll or KQueue).
+     * @param threadFactory The thread factory to use for event loop groups.
+     * @param loggingHandler The logging handler to use for the server bootstrap.
      *
      * @return actual port of server.
      */
-    suspend fun start(port: Int, useNativeTransport: Boolean = true): Int = lock.withLock {
+    suspend fun start(
+        port: Int,
+        useNativeTransport: Boolean = true,
+        threadFactory: ThreadFactory? = DefaultThreadFactory("NettyHttpServer"),
+        loggingHandler: LoggingHandler? = LoggingHandler(LogLevel.INFO),
+    ): Int = lock.withLock {
         val b = ServerBootstrap()
 
-        val groups = b.setup(useNativeTransport)
+        val groups = b.setup(useNativeTransport, threadFactory)
         bossGroup = groups.first
         workerGroup = groups.second
 
         try {
             logger.info("Starting Netty server...")
             b.option(ChannelOption.SO_BACKLOG, 1024)
-                .handler(LoggingHandler(LogLevel.INFO))
-                .childHandler(HttpChannelInitializer(this))
+            if (loggingHandler != null) {
+                b.handler(loggingHandler)
+            }
+            b.childHandler(HttpChannelInitializer(this))
             val ch = b.bind(port).syncSuspend().channel()
             serverChannel = ch
             webSocketController = WebSocketController(ch)

@@ -36,6 +36,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel
 import net.ccbluex.netty.http.util.TransportType.EPOLL
 import net.ccbluex.netty.http.util.TransportType.KQUEUE
 import net.ccbluex.netty.http.util.TransportType.NIO
+import java.util.concurrent.ThreadFactory
 
 internal enum class TransportType(
     val serverChannelFactory: ChannelFactory<out ServerChannel>,
@@ -73,15 +74,19 @@ private val available by lazy {
  *
  * @receiver The server bootstrap to configure.
  * @param useNativeTransport Whether to use native transport (Epoll or KQueue).
+ * @param threadFactory The thread factory to use for event loop groups.
  *
  * @return Parent and child group.
  */
 @JvmOverloads
-fun ServerBootstrap.setup(useNativeTransport: Boolean = true): Pair<EventLoopGroup, EventLoopGroup> {
+fun ServerBootstrap.setup(
+    useNativeTransport: Boolean = true,
+    threadFactory: ThreadFactory? = null,
+): Pair<EventLoopGroup, EventLoopGroup> {
     val type = if (useNativeTransport) available else NIO
 
-    val parentGroup = MultiThreadIoEventLoopGroup(1, type.ioHandlerFactory)
-    val childGroup = MultiThreadIoEventLoopGroup(type.ioHandlerFactory)
+    val parentGroup = MultiThreadIoEventLoopGroup(1, threadFactory, type.ioHandlerFactory)
+    val childGroup = MultiThreadIoEventLoopGroup(threadFactory, type.ioHandlerFactory)
     group(parentGroup, childGroup)
         .channelFactory(type.serverChannelFactory)
     return parentGroup to childGroup
