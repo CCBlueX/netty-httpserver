@@ -22,6 +22,7 @@ package net.ccbluex.netty.http.websocket
 import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -29,8 +30,9 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import net.ccbluex.netty.http.coroutines.awaitSuspend
+import net.ccbluex.netty.http.HttpServer.Companion.logger
 import net.ccbluex.netty.http.coroutines.syncSuspend
+import java.nio.charset.Charset
 import java.util.concurrent.CopyOnWriteArraySet
 import java.util.function.BiConsumer
 
@@ -42,7 +44,9 @@ class WebSocketController(
 ) {
 
     private val scope = CoroutineScope(
-        serverChannel.eventLoop().asCoroutineDispatcher() + SupervisorJob()
+        serverChannel.eventLoop().asCoroutineDispatcher() + SupervisorJob() + CoroutineExceptionHandler { _, err ->
+            logger.error("Uncaught exception in websocket controller", err)
+        }
     )
 
     init {
@@ -59,26 +63,39 @@ class WebSocketController(
      * Broadcasts a message to all connected clients.
      *
      * @param text The message to broadcast.
-     * @param onFailure The action to take if a failure occurs.
+     * @param charset The charset to use for encoding the message. Defaults to [Charsets.UTF_8].
+     * @param onFailure The action to take if a failure occurs. Defaults to `null`.
      */
-    fun broadcast(text: String, onFailure: BiConsumer<ChannelHandlerContext, Throwable>? = null): Job =
-        scope.launch {
-            val frame = TextWebSocketFrame(text)
+    fun broadcast(
+        text: CharSequence,
+        charset: Charset = Charsets.UTF_8,
+        onFailure: BiConsumer<ChannelHandlerContext, Throwable>? = null,
+    ): Job = scope.launch {
+        val frameByteBuf = serverChannel.alloc().buffer()
+        frameByteBuf.writeCharSequence(text, charset)
 
-            activeContexts.map { handlerContext ->
-                launch {
+        val frame = TextWebSocketFrame(frameByteBuf)
+
+        activeContexts.map { handlerContext ->
+            launch {
+                if (handlerContext.channel().isActive) {
                     try {
                         handlerContext.channel()
                             .writeAndFlush(frame.retainedDuplicate())
                             .syncSuspend()
-                    } catch (e: Exception) {
+                    } catch (e: Throwable) {
                         onFailure?.accept(handlerContext, e)
                     }
+                } else {
+                    // Channel is not active, close and remove it
+                    handlerContext.close().syncSuspend()
+                    removeContext(handlerContext)
                 }
-            }.joinAll()
+            }
+        }.joinAll()
 
-            frame.release()
-        }
+        frame.release()
+    }
 
     /**
      * Closes all active contexts.
@@ -97,10 +114,10 @@ class WebSocketController(
      * @param context The context to add.
      */
     fun addContext(context: ChannelHandlerContext) {
-        activeContexts.add(context)
         context.channel().closeFuture().addListener {
             removeContext(context)
         }
+        activeContexts.add(context)
     }
 
     /**
