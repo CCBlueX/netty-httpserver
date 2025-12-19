@@ -32,6 +32,7 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import net.ccbluex.netty.http.HttpServer.Companion.logger
 import net.ccbluex.netty.http.coroutines.syncSuspend
+import java.nio.channels.ClosedChannelException
 import java.nio.charset.Charset
 import java.util.concurrent.CopyOnWriteArraySet
 import java.util.function.BiConsumer
@@ -78,18 +79,16 @@ class WebSocketController(
 
         activeContexts.map { handlerContext ->
             launch {
-                if (handlerContext.channel().isActive) {
-                    try {
-                        handlerContext.channel()
-                            .writeAndFlush(frame.retainedDuplicate())
-                            .syncSuspend()
-                    } catch (e: Throwable) {
-                        onFailure?.accept(handlerContext, e)
-                    }
-                } else {
+                try {
+                    handlerContext.channel()
+                        .writeAndFlush(frame.retainedDuplicate())
+                        .syncSuspend()
+                } catch (_: ClosedChannelException) {
                     // Channel is not active, close and remove it
                     handlerContext.close().syncSuspend()
                     removeContext(handlerContext)
+                } catch (e: Throwable) {
+                    onFailure?.accept(handlerContext, e)
                 }
             }
         }.joinAll()
