@@ -46,12 +46,12 @@ internal suspend fun HttpServer.processRequestContext(context: RequestContext) =
         return@runCatching httpBadRequest("Incomplete request")
     }
 
-    val (node, params, remaining) = routeController.processPath(context.path, method) ?:
-        return@runCatching httpNotFound(context.path, "Route not found")
-
     if (method == HttpMethod.OPTIONS) {
         return@runCatching httpNoContent()
     }
+
+    val (node, params, remaining) = routeController.processPath(context.path, method) ?:
+        return@runCatching httpNotFound(context.path, "Route not found")
 
     logger.debug("Found destination {}", node)
     val requestObject = RequestObject(

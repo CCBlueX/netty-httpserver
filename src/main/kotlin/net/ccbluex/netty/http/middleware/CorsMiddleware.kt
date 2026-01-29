@@ -34,26 +34,30 @@ class CorsMiddleware(
     override fun invoke(context: RequestContext, response: FullHttpResponse): FullHttpResponse {
         val httpHeaders = response.headers()
         val requestOrigin = context.headers[HttpHeaderNames.ORIGIN]
-
-        if (allowedOrigins.contains("*")) {
-            httpHeaders[HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN] = "*"
+        val allowedOrigin = if (allowedOrigins.contains("*")) {
+            "*"
         } else if (requestOrigin != null) {
-            try {
-                val uri = URI(requestOrigin)
-                val host = uri.host
-                if (allowedOrigins.contains(host) || allowedOrigins.contains(requestOrigin)) {
-                    httpHeaders[HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN] = requestOrigin
-                } else {
-                    httpHeaders[HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN] = "null"
-                }
-            } catch (e: URISyntaxException) {
-                httpHeaders[HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN] = "null"
+            val host = try {
+                URI(requestOrigin).host
+            } catch (e: Exception) {
                 logger.error("Invalid Origin header: $requestOrigin", e)
+                null
+            }
+
+            if (host != null && allowedOrigins.contains(host) || allowedOrigins.contains(requestOrigin)) {
+                requestOrigin
+            } else {
+                null
             }
         } else {
-            httpHeaders[HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN] = "null"
+            null
         }
 
+        if (allowedOrigin == null) {
+            logger.debug("CORS origin not allowed: $requestOrigin")
+            return response
+        }
+        httpHeaders[HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN] = allowedOrigin
         httpHeaders[HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS] = allowedMethods.joinToString(", ")
         httpHeaders[HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS] = allowedHeaders.joinToString(", ")
         return response
