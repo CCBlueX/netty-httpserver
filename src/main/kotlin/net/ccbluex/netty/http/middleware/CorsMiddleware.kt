@@ -35,30 +35,27 @@ class CorsMiddleware(
         val httpHeaders = response.headers()
         val requestOrigin = context.headers[HttpHeaderNames.ORIGIN]
 
-        if (requestOrigin != null) {
+        if (allowedOrigins.contains("*")) {
+            httpHeaders[HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN] = "*"
+        } else if (requestOrigin != null) {
             try {
-                // Parse the origin to extract the hostname (ignoring the port)
                 val uri = URI(requestOrigin)
                 val host = uri.host
-
-                // Allow requests from localhost or 127.0.0.1 regardless of the port
                 if (allowedOrigins.contains(host) || allowedOrigins.contains(requestOrigin)) {
                     httpHeaders[HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN] = requestOrigin
                 } else {
-                    // Block cross-origin requests by not allowing other origins
                     httpHeaders[HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN] = "null"
                 }
             } catch (e: URISyntaxException) {
-                // Handle bad URIs by setting a default CORS policy or logging the error
                 httpHeaders[HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN] = "null"
                 logger.error("Invalid Origin header: $requestOrigin", e)
             }
-
-            // Allow specific methods and headers for cross-origin requests
-            httpHeaders[HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS] = allowedMethods.joinToString(", ")
-            httpHeaders[HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS] = allowedHeaders.joinToString(", ")
+        } else {
+            httpHeaders[HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN] = "null"
         }
 
+        httpHeaders[HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS] = allowedMethods.joinToString(", ")
+        httpHeaders[HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS] = allowedHeaders.joinToString(", ")
         return response
     }
 
