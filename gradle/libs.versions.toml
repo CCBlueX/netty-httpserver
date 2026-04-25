@@ -1,4 +1,6 @@
 [versions]
+
+kotlin = "2.3.0"
 # https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core
 log4j = "2.23.1"
 # https://mvnrepository.com/artifact/io.netty/netty-all
@@ -27,6 +29,9 @@ tika-core = { module = "org.apache.tika:tika-core", version.ref = "tika" }
 retrofit-core = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 retrofit-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "retrofit" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 
 [bundles]
 netty = [
