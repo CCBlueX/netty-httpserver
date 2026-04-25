@@ -1,4 +1,5 @@
 import io.netty.handler.codec.http.*
+import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import net.ccbluex.netty.http.util.*
 import org.junit.jupiter.api.Assertions.*
@@ -31,6 +32,25 @@ class HttpResponseUtilTest {
         assertEquals(HttpResponseStatus.OK, response.status())
         assertEquals("application/json", response.headers()[HttpHeaderNames.CONTENT_TYPE])
         assertEquals("{\"key\":\"value\"}", response.content().toString(Charsets.UTF_8))
+    }
+
+    @Test
+    fun httpOk_usesProvidedGsonForPojoSerialization() {
+        data class Payload(val value: String)
+
+        val gson = GsonBuilder()
+            .registerTypeAdapter(Payload::class.java) { src: Payload, _, _ ->
+                JsonObject().apply {
+                    addProperty("custom", src.value)
+                }
+            }
+            .create()
+
+        val response = httpOk(Payload("value"), gson)
+
+        assertEquals(HttpResponseStatus.OK, response.status())
+        assertEquals("application/json", response.headers()[HttpHeaderNames.CONTENT_TYPE])
+        assertEquals("{\"custom\":\"value\"}", response.content().toString(Charsets.UTF_8))
     }
 
     @Test

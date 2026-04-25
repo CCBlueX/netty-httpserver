@@ -100,7 +100,7 @@ fun httpResponse(status: HttpResponseStatus, json: JsonElement, gson: Gson = DEF
 fun <T : Any> httpResponse(status: HttpResponseStatus, json: T, gson: Gson = DEFAULT_GSON) = httpResponse(
     status,
     "application/json",
-    PooledByteBufAllocator.DEFAULT.writeJson(json, json.javaClass)
+    PooledByteBufAllocator.DEFAULT.writeJson(json, json.javaClass, gson)
 )
 
 /**
