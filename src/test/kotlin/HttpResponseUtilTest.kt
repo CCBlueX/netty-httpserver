@@ -1,6 +1,7 @@
 import io.netty.handler.codec.http.*
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
+import com.google.gson.JsonSerializer
 import net.ccbluex.netty.http.util.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -39,11 +40,11 @@ class HttpResponseUtilTest {
         data class Payload(val value: String)
 
         val gson = GsonBuilder()
-            .registerTypeAdapter(Payload::class.java) { src: Payload, _, _ ->
+            .registerTypeAdapter(Payload::class.java, JsonSerializer { src: Payload, _, _ ->
                 JsonObject().apply {
                     addProperty("custom", src.value)
                 }
-            }
+            })
             .create()
 
         val response = httpOk(Payload("value"), gson)
