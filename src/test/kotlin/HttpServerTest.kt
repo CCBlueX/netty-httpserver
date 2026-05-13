@@ -122,6 +122,14 @@ class HttpServerTest {
         get("/v/:name") { param() }
         get("/r/:value1/:value2") { params() }
         get("/o/:value1/in/:value2") { params() }
+        route("/errors") {
+            get("/bad-request") {
+                badRequest("Bad request")
+            }
+            get("/service-unavailable") {
+                serviceUnavailable("Service unavailable")
+            }
+        }
     }
 
     private fun Routing.nestedRoutes() {
@@ -353,6 +361,29 @@ class HttpServerTest {
     fun testNonExistentEndpoint() {
         val response = makeRequest("/nonexistent")
         assertEquals(404, response.code, "Expected status code 404")
+    }
+
+    @Test
+    fun testBadRequestAbortEndpoint() {
+        val response = makeRequest("/errors/bad-request")
+        assertEquals(400, response.code, "Expected status code 400")
+
+        val responseBody = response.body?.string()
+        assertNotNull(responseBody, "Response body should not be null")
+        assertTrue(responseBody.contains("\"reason\":\"Bad request\""), "Response should contain the abort reason")
+    }
+
+    @Test
+    fun testServiceUnavailableAbortEndpoint() {
+        val response = makeRequest("/errors/service-unavailable")
+        assertEquals(503, response.code, "Expected status code 503")
+
+        val responseBody = response.body?.string()
+        assertNotNull(responseBody, "Response body should not be null")
+        assertTrue(
+            responseBody.contains("\"reason\":\"Service unavailable\""),
+            "Response should contain the abort reason"
+        )
     }
 
     @Test

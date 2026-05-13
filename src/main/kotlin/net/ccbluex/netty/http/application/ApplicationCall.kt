@@ -2,6 +2,7 @@ package net.ccbluex.netty.http.application
 
 import com.google.gson.Gson
 import com.google.gson.JsonElement
+import io.netty.buffer.PooledByteBufAllocator
 import io.netty.handler.codec.http.FullHttpResponse
 import io.netty.handler.codec.http.HttpHeaders
 import io.netty.handler.codec.http.HttpMethod
@@ -15,9 +16,14 @@ import net.ccbluex.netty.http.util.httpInternalServerError
 import net.ccbluex.netty.http.util.httpNoContent
 import net.ccbluex.netty.http.util.httpNotFound
 import net.ccbluex.netty.http.util.httpResponse
+import net.ccbluex.netty.http.util.httpServiceUnavailable
 import net.ccbluex.netty.http.util.httpUnauthorized
+import net.ccbluex.netty.http.util.inputStream
+import net.ccbluex.netty.http.util.outputStream
+import net.ccbluex.netty.http.util.tika
 import java.io.File
 import java.io.InputStream
+import java.io.OutputStream
 
 open class ApplicationCall(
     val uri: String,
@@ -75,6 +81,23 @@ open class ApplicationCall(
         respond(httpFileStream(stream, contentType, contentLength))
     }
 
+    @JvmOverloads
+    fun respondOutputStream(
+        contentType: String? = null,
+        status: HttpResponseStatus = HttpResponseStatus.OK,
+        contentLength: Int = 256,
+        producer: OutputStream.() -> Unit,
+    ) {
+        val allocator = PooledByteBufAllocator.DEFAULT
+        val buf = allocator.buffer(contentLength)
+
+        buf.outputStream().use {
+            producer(it)
+        }
+
+        respond(httpResponse(status, contentType ?: tika.detect(buf.duplicate().inputStream()), buf))
+    }
+
     fun takeResponse(): FullHttpResponse {
         return response ?: throw IllegalStateException("Route handler completed without responding for $method $path")
     }
@@ -86,6 +109,8 @@ open class ApplicationCall(
     fun unauthorized(reason: String): Nothing = abort(httpUnauthorized(reason))
 
     fun notFound(path: String, reason: String): Nothing = abort(httpNotFound(path, reason))
+
+    fun serviceUnavailable(reason: String): Nothing = abort(httpServiceUnavailable(reason))
 
     fun internalServerError(reason: String): Nothing = abort(httpInternalServerError(reason))
 

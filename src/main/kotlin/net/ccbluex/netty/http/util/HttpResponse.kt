@@ -169,7 +169,7 @@ fun httpBadRequest(reason: String): FullHttpResponse {
     return httpResponse(HttpResponseStatus.BAD_REQUEST, ResponseBody(reason))
 }
 
-private val tika = Tika()
+internal val tika = Tika()
 
 /**
  * Creates an HTTP response for the given file.

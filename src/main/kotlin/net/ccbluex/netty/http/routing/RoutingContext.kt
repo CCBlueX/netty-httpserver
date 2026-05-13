@@ -9,7 +9,6 @@ import net.ccbluex.netty.http.application.ApplicationCall
 import net.ccbluex.netty.http.rest.Node
 import java.io.File
 import java.io.InputStream
-import java.lang.reflect.Type
 
 typealias RoutingHandler = suspend RoutingContext.() -> Unit
 
@@ -56,5 +55,6 @@ class RoutingContext(
     fun forbidden(reason: String): Nothing = call.forbidden(reason)
     fun unauthorized(reason: String): Nothing = call.unauthorized(reason)
     fun notFound(path: String, reason: String): Nothing = call.notFound(path, reason)
+    fun serviceUnavailable(reason: String): Nothing = call.serviceUnavailable(reason)
     fun internalServerError(reason: String): Nothing = call.internalServerError(reason)
 }

@@ -60,24 +60,40 @@ Here is an example of how to use the library to create a simple "Hello, World!" 
 ```kotlin
 import com.google.gson.JsonObject
 import net.ccbluex.netty.http.HttpServer
-import net.ccbluex.netty.http.util.httpOk
+import net.ccbluex.netty.http.routing.Routing
+import net.ccbluex.netty.http.routing.RoutingContext
 
 suspend fun main() {
     val server = HttpServer()
 
     server.routing {
-        get("/hello") {
-            httpOk(JsonObject().apply {
-                addProperty("message", "Hello, World!")
-            })
-        }
+        helloRoutes()
     }
 
     server.start(8080)  // Start the server on port 8080
 }
+
+fun Routing.helloRoutes() {
+    get("/hello") { getHello() }
+}
+
+private suspend fun RoutingContext.getHello() {
+    respond(JsonObject().apply {
+        addProperty("message", "Hello, World!")
+    })
+}
 ```
 
 In this example, the server listens on port `8080` and responds with a JSON message `"Hello, World!"` when accessing the `/hello` endpoint.
+
+### Responding and aborting
+
+`RoutingContext` handlers should either:
+
+1. Call `respond(...)`, `respondNoContent()`, `respondFile(...)`, or `respondFileStream(...)`, or
+2. Abort with `badRequest(...)`, `forbidden(...)`, `unauthorized(...)`, `notFound(...)`, `serviceUnavailable(...)`, or `internalServerError(...)`.
+
+The abort helpers throw an internal `ResponseException` to stop the handler immediately, so they should not be wrapped in a broad `catch (Exception)` unless you rethrow that control-flow exception.
 
 ### Examples
 
@@ -119,4 +135,3 @@ Netty HttpServer is developed and maintained by CCBlueX. It was originally part 
 ---
 
 Feel free to explore the examples provided and adapt them to your specific needs. Happy coding!
-
