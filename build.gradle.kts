@@ -11,7 +11,7 @@ val authorName = "ccbluex"
 val projectUrl = "https://github.com/ccbluex/netty-httpserver"
 
 group = "net.ccbluex"
-version = "2.5.6"
+version = "2.6.0"
 
 repositories {
     mavenCentral()
