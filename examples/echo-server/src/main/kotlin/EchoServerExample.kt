@@ -1,19 +1,24 @@
 import com.google.gson.JsonObject
-import io.netty.handler.codec.http.FullHttpResponse
 import net.ccbluex.netty.http.HttpServer
-import net.ccbluex.netty.http.model.RequestObject
-import net.ccbluex.netty.http.util.httpOk
+import net.ccbluex.netty.http.routing.Routing
+import net.ccbluex.netty.http.routing.RoutingContext
 
 suspend fun main() {
     val server = HttpServer()
 
     server.routing {
-        post("/echo", ::postEcho) // /echo
+        echoRoutes()
     }
 
     server.start(8080)  // Start the server on port 8080
 }
 
-fun postEcho(requestObject: RequestObject): FullHttpResponse {
-    return httpOk(requestObject.asJson<JsonObject>())
+fun Routing.echoRoutes() {
+    route("/echo") {
+        post { postEcho() }
+    }
+}
+
+private suspend fun RoutingContext.postEcho() {
+    respond(receive<JsonObject>())
 }

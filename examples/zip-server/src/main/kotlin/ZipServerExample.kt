@@ -19,15 +19,19 @@
  */
 
 import net.ccbluex.netty.http.HttpServer
-import net.ccbluex.netty.http.rest.RouteController
+import net.ccbluex.netty.http.routing.Routing
 import java.io.File
 
 suspend fun main() {
     // Start server
     val server = HttpServer()
     server.routing {
-        zip("/static", File("example.zip").inputStream())
+        zipRoutes()
     }
 
     server.start(8080)
+}
+
+fun Routing.zipRoutes() {
+    zip("/static", File("example.zip").inputStream())
 }

@@ -1,9 +1,7 @@
 import com.google.gson.JsonObject
-import io.netty.handler.codec.http.FullHttpResponse
 import net.ccbluex.netty.http.HttpServer
-import net.ccbluex.netty.http.model.RequestObject
-import net.ccbluex.netty.http.util.httpBadRequest
-import net.ccbluex.netty.http.util.httpOk
+import net.ccbluex.netty.http.routing.Routing
+import net.ccbluex.netty.http.routing.RoutingContext
 import java.io.File
 
 const val FOLDER_NAME = "files"
@@ -15,11 +13,7 @@ suspend fun main() {
     println("Serving files from: ${folder.absolutePath}")
 
     server.routing {
-        get("/", ::getRoot)
-        get("/conflicting", ::getConflictingPath)
-        get("/a/b/c", ::getConflictingPath)
-        get("/file/:name", ::getFileInformation)
-        post("/file/:name", ::postFile)
+        fileRoutes()
 
         // register file serving at the bottom of the routing tree
         // to avoid overwriting other routes
@@ -29,50 +23,60 @@ suspend fun main() {
     server.start(8080)  // Start the server on port 8080
 }
 
-@Suppress("UNUSED_PARAMETER")
-fun getRoot(requestObject: RequestObject): FullHttpResponse {
-    // Count the number of files in the folder
-    // Walk the folder and count the number of files
-    return httpOk(JsonObject().apply {
+fun Routing.fileRoutes() {
+    get("/") { getRoot() }
+    get("/conflicting") { getConflictingPath() }
+
+    route("/a") {
+        route("/b") {
+            get("/c") { getConflictingPath() }
+        }
+    }
+
+    route("/file") {
+        get("/:name") { getFileInformation() }
+        post("/:name") { postFile() }
+    }
+}
+
+private suspend fun RoutingContext.getRoot() {
+    respond(JsonObject().apply {
         addProperty("path", folder.absolutePath)
         addProperty("files", folder.walk().count())
     })
 }
 
-@Suppress("UNUSED_PARAMETER")
-fun getConflictingPath(requestObject: RequestObject): FullHttpResponse {
-    return httpOk(JsonObject().apply {
+private suspend fun RoutingContext.getConflictingPath() {
+    respond(JsonObject().apply {
         addProperty("message", "This is a conflicting path")
     })
 }
 
-@Suppress("UNUSED_PARAMETER")
-fun getFileInformation(requestObject: RequestObject): FullHttpResponse {
-    val name = requestObject.params["name"] ?: return httpBadRequest("Missing name parameter")
+private suspend fun RoutingContext.getFileInformation() {
+    val name = parameters["name"] ?: badRequest("Missing name parameter")
     val file = File(folder, name)
 
     if (!file.exists()) {
-        return httpBadRequest("File not found")
+        badRequest("File not found")
     }
 
-    return httpOk(JsonObject().apply {
+    respond(JsonObject().apply {
         addProperty("name", file.name)
         addProperty("size", file.length())
         addProperty("lastModified", file.lastModified())
     })
 }
 
-@Suppress("UNUSED_PARAMETER")
-fun postFile(requestObject: RequestObject): FullHttpResponse {
-    val name = requestObject.params["name"] ?: return httpBadRequest("Missing name parameter")
+private suspend fun RoutingContext.postFile() {
+    val name = parameters["name"] ?: badRequest("Missing name parameter")
     val file = File(folder, name)
 
     if (file.exists()) {
-        return httpBadRequest("File already exists")
+        badRequest("File already exists")
     }
 
-    file.writeText(requestObject.body)
-    return httpOk(JsonObject().apply {
+    file.writeText(body)
+    respond(JsonObject().apply {
         addProperty("message", "File written")
     })
 }

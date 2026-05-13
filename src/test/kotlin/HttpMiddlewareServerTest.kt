@@ -1,12 +1,11 @@
 import com.google.gson.JsonObject
-import io.netty.handler.codec.http.FullHttpResponse
 import io.netty.handler.codec.http.HttpResponseStatus
 import kotlinx.coroutines.runBlocking
 import net.ccbluex.netty.http.HttpServer
 import net.ccbluex.netty.http.middleware.Middleware
-import net.ccbluex.netty.http.model.RequestObject
+import net.ccbluex.netty.http.routing.Routing
+import net.ccbluex.netty.http.routing.RoutingContext
 import net.ccbluex.netty.http.util.httpBadRequest
-import net.ccbluex.netty.http.util.httpOk
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -63,7 +62,7 @@ class HttpMiddlewareServerTest {
         val server = HttpServer()
 
         server.routing {
-            get("/", ::static)
+            middlewareRoutes()
         }
 
         server.middleware(Middleware.OnResponse { requestContext, fullHttpResponse ->
@@ -85,11 +84,14 @@ class HttpMiddlewareServerTest {
         server
     }
 
-    @Suppress("UNUSED_PARAMETER")
-    fun static(requestObject: RequestObject): FullHttpResponse {
-        return httpOk(JsonObject().apply {
+    private suspend fun RoutingContext.static() {
+        respond(JsonObject().apply {
             addProperty("message", "Hello, World!")
         })
+    }
+
+    private fun Routing.middlewareRoutes() {
+        get("/") { static() }
     }
 
     /**

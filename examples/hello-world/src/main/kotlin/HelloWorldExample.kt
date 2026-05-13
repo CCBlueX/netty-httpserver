@@ -1,41 +1,45 @@
 import com.google.gson.JsonObject
-import io.netty.handler.codec.http.FullHttpResponse
 import net.ccbluex.netty.http.HttpServer
-import net.ccbluex.netty.http.model.RequestObject
-import net.ccbluex.netty.http.util.httpOk
+import net.ccbluex.netty.http.routing.Routing
+import net.ccbluex.netty.http.routing.RoutingContext
 
 suspend fun main() {
     val server = HttpServer()
 
     server.routing {
-        get("/", ::getRoot)
-        get("/hello", ::getHello) // /hello?name=World
-        get("/hello/:name", ::getHello) // /hello/World
-        get("/hello/:name/:age", ::getHelloWithAge) // /hello/World/20
+        helloWorldRoutes()
     }
 
     server.start(8080)  // Start the server on port 8080
 }
 
-@Suppress("UNUSED_PARAMETER")
-fun getRoot(requestObject: RequestObject): FullHttpResponse {
-    return httpOk(JsonObject().apply {
+fun Routing.helloWorldRoutes() {
+    get("/") { getRoot() }
+
+    route("/hello") {
+        get { getHello() } // /hello?name=World
+        get("/:name") { getHello() } // /hello/World
+        get("/:name/:age") { getHelloWithAge() } // /hello/World/20
+    }
+}
+
+private suspend fun RoutingContext.getRoot() {
+    respond(JsonObject().apply {
         addProperty("root", true)
     })
 }
 
-fun getHello(requestObject: RequestObject): FullHttpResponse {
-    val name = requestObject.params["name"] ?: requestObject.queryParams["name"] ?: "World"
-    return httpOk(JsonObject().apply {
+private suspend fun RoutingContext.getHello() {
+    val name = parameters["name"] ?: queryParameters["name"] ?: "World"
+    respond(JsonObject().apply {
         addProperty("message", "Hello, $name!")
     })
 }
 
-fun getHelloWithAge(requestObject: RequestObject): FullHttpResponse {
-    val name = requestObject.params["name"] ?: "World"
-    val age = requestObject.params["age"] ?: "0"
-    return httpOk(JsonObject().apply {
+private suspend fun RoutingContext.getHelloWithAge() {
+    val name = parameters["name"] ?: "World"
+    val age = parameters["age"] ?: "0"
+    respond(JsonObject().apply {
         addProperty("message", "Hello, $name! You are $age years old.")
     })
 }
-

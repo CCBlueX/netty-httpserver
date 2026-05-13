@@ -1,9 +1,8 @@
 import com.google.gson.JsonObject
-import io.netty.handler.codec.http.FullHttpResponse
 import kotlinx.coroutines.runBlocking
 import net.ccbluex.netty.http.HttpServer
-import net.ccbluex.netty.http.model.RequestObject
-import net.ccbluex.netty.http.util.httpOk
+import net.ccbluex.netty.http.routing.Routing
+import net.ccbluex.netty.http.routing.RoutingContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -68,36 +67,9 @@ class HttpServerTest {
         val server = HttpServer()
 
         server.routing {
-            // Routes with difficulty levels
-            get("/a", ::a)
-            get("/b", ::b)
-            get("/c", ::c)
-            get("/v/:name", ::param)
-            get("/r/:value1/:value2", ::params)
-            get("/o/:value1/in/:value2", ::params)
-            get("/m/a/b", ::b)
-            get("/m/a/c", ::c)
-            get("/m/b/a", ::a)
-            get("/m/b/c", ::c)
-            get("/m/c/a", ::a)
-
-            get("/m/c/b", ::b)
-
-            get("/h/a/b", ::b)
-            get("/h/a", ::a)
-
-            delete("/api/v1/s/s", ::static)
-            get("/api/v1/s/s", ::static)
-            get("/api/v1/s", ::static)
-
-            route("/ktor") {
-                get(::a)
-                route("/nested") {
-                    get(::b)
-                }
-            }
-
-            get("/", ::static)
+            basicRoutes()
+            nestedRoutes()
+            apiRoutes()
             file("/abc", folder)
             file("/def/abc", folder)
         }
@@ -106,41 +78,95 @@ class HttpServerTest {
         server
     }
 
-    @Suppress("UNUSED_PARAMETER")
-    fun static(requestObject: RequestObject): FullHttpResponse {
-        return httpOk(JsonObject().apply {
+    private suspend fun RoutingContext.static() {
+        respond(JsonObject().apply {
             addProperty("message", "Hello, World!")
         })
     }
 
-    fun param(requestObject: RequestObject): FullHttpResponse {
-        return httpOk(JsonObject().apply {
-            addProperty("message", "Hello, ${requestObject.params["name"]}")
+    private suspend fun RoutingContext.param() {
+        respond(JsonObject().apply {
+            addProperty("message", "Hello, ${parameters["name"]}")
         })
     }
 
-    fun params(requestObject: RequestObject): FullHttpResponse {
-        return httpOk(JsonObject().apply {
-            addProperty("message", "Hello, ${requestObject.params["value1"]} and ${requestObject.params["value2"]}")
+    private suspend fun RoutingContext.params() {
+        respond(JsonObject().apply {
+            addProperty("message", "Hello, ${parameters["value1"]} and ${parameters["value2"]}")
         })
     }
 
-    fun a(requestObject: RequestObject): FullHttpResponse {
-        return httpOk(JsonObject().apply {
+    private suspend fun RoutingContext.a() {
+        respond(JsonObject().apply {
             addProperty("char", "A")
         })
     }
 
-    fun b(requestObject: RequestObject): FullHttpResponse {
-        return httpOk(JsonObject().apply {
+    private suspend fun RoutingContext.b() {
+        respond(JsonObject().apply {
             addProperty("char", "B")
         })
     }
 
-    fun c(requestObject: RequestObject): FullHttpResponse {
-        return httpOk(JsonObject().apply {
+    private suspend fun RoutingContext.c() {
+        respond(JsonObject().apply {
             addProperty("char", "C")
         })
+    }
+
+    private fun Routing.basicRoutes() {
+        get("/") { static() }
+        get("/a") { a() }
+        get("/b") { b() }
+        get("/c") { c() }
+        get("/v/:name") { param() }
+        get("/r/:value1/:value2") { params() }
+        get("/o/:value1/in/:value2") { params() }
+    }
+
+    private fun Routing.nestedRoutes() {
+        route("/m") {
+            route("/a") {
+                get("/b") { b() }
+                get("/c") { c() }
+            }
+            route("/b") {
+                get("/a") { a() }
+                get("/c") { c() }
+            }
+            route("/c") {
+                get("/a") { a() }
+                get("/b") { b() }
+            }
+        }
+
+        route("/h") {
+            get("/a") { a() }
+            route("/a") {
+                get("/b") { b() }
+            }
+        }
+
+        route("/ktor") {
+            get { a() }
+            route("/nested") {
+                get { b() }
+            }
+        }
+    }
+
+    private fun Routing.apiRoutes() {
+        route("/api") {
+            route("/v1") {
+                route("/s") {
+                    get { static() }
+                    route("/s") {
+                        get { static() }
+                        delete { static() }
+                    }
+                }
+            }
+        }
     }
 
     /**

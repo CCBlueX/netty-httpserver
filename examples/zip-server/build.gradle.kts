@@ -23,7 +23,7 @@ dependencies {
 }
 
 application {
-    mainClass.set("HelloWorldExampleKt")
+    mainClass.set("ZipServerExampleKt")
 }
 
 tasks.test {
@@ -36,7 +36,7 @@ tasks.withType<JavaCompile> {
 
 tasks.withType<Jar> {
     manifest {
-        attributes["Main-Class"] = "HelloWorldExampleKt"
+        attributes["Main-Class"] = "ZipServerExampleKt"
     }
 
     // Include runtime dependencies in the JAR
