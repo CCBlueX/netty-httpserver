@@ -21,30 +21,37 @@ package net.ccbluex.netty.http.model
 
 import io.netty.handler.codec.http.HttpHeaders
 import io.netty.handler.codec.http.HttpMethod
+import net.ccbluex.netty.http.application.ApplicationCall
 import net.ccbluex.netty.http.util.DEFAULT_GSON
 
 /**
- * Represents an HTTP request object.
+ * Compatibility wrapper for the pre-2.6 request API.
  *
- * @property uri The full URI of the request.
- * @property path The path of the request.
- * @property remainingPath The ending part of the path which was not matched by the route.
- * @property method The HTTP method of the request.
- * @property body The body of the request.
- * @property params The inline URI parameters of the request.
- * @property queryParams The query parameters of the request.
- * @property headers The headers of the request.
+ * New code should use [ApplicationCall] inside a routing context instead.
  */
-data class RequestObject(
-    val uri: String,
-    val path: String,
-    val remainingPath: String,
-    val method: HttpMethod,
-    val body: String,
-    val params: Map<String, String>,
-    val queryParams: Map<String, String>,
-    val headers: HttpHeaders
+@Deprecated("Use ApplicationCall within RoutingContext handlers")
+class RequestObject(
+    uri: String,
+    path: String,
+    remainingPath: String,
+    method: HttpMethod,
+    body: String,
+    params: Map<String, String>,
+    queryParams: Map<String, String>,
+    headers: HttpHeaders
+) : ApplicationCall(
+    uri = uri,
+    path = path,
+    remainingPath = remainingPath,
+    method = method,
+    body = body,
+    parameters = params,
+    queryParameters = queryParams,
+    headers = headers
 ) {
+
+    val params: Map<String, String> get() = parameters
+    val queryParams: Map<String, String> get() = queryParameters
 
     /**
      * Converts the body of the request to a JSON object of the specified type.
@@ -52,7 +59,7 @@ data class RequestObject(
      * @return The JSON object of the specified type.
      */
     inline fun <reified T> asJson(): T {
-        return GSON_INSTANCE.fromJson(body, T::class.java)
+        return receive(GSON_INSTANCE)
     }
 
     companion object {

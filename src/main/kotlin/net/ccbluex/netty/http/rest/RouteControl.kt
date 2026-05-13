@@ -48,7 +48,7 @@ class RouteController : Node("") {
      * @return The destination node and associated information, or null if no destination is found.
      */
     internal fun processPath(path: String, method: HttpMethod): Destination? {
-        val pathArray = path.asPathArray()
+        val pathArray = path.toPathArray()
         require(pathArray.isNotEmpty()) { "Path cannot be empty" }
 
         return travelNode(this, pathArray, method, 0, mutableMapOf())
@@ -66,7 +66,7 @@ class RouteController : Node("") {
      */
     private fun travelNode(
         currentNode: Node,
-        pathArray: Array<String>,
+        pathArray: List<String>,
         method: HttpMethod,
         index: Int,
         params: MutableMap<String, String>
@@ -92,7 +92,7 @@ class RouteController : Node("") {
         return if (currentNode.matchesMethod(method)) {
             // remainingPath should only include the unmatched trailing segments,
             // not the already matched route path
-            val remaining = if (index >= pathArray.size) "" else pathArray.copyOfRange(index, pathArray.size).joinToString("/")
+            val remaining = if (index >= pathArray.size) "" else pathArray.subList(index, pathArray.size).joinToString("/")
             Destination(currentNode, params, remaining)
         } else {
             null

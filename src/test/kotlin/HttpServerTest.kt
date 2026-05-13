@@ -90,6 +90,13 @@ class HttpServerTest {
             get("/api/v1/s/s", ::static)
             get("/api/v1/s", ::static)
 
+            route("/ktor") {
+                get(::a)
+                route("/nested") {
+                    get(::b)
+                }
+            }
+
             get("/", ::static)
             file("/abc", folder)
             file("/def/abc", folder)
@@ -204,6 +211,28 @@ class HttpServerTest {
         assertNotNull(responseBody, "Response body should not be null")
 
         assertTrue(responseBody.contains("\"char\":\"C\""), "Response should contain char 'C'")
+    }
+
+    @Test
+    fun testKtorStyleNodeEndpoint() {
+        val response = makeRequest("/ktor")
+        assertEquals(200, response.code, "Expected status code 200")
+
+        val responseBody = response.body?.string()
+        assertNotNull(responseBody, "Response body should not be null")
+
+        assertTrue(responseBody.contains("\"char\":\"A\""), "Response should contain char 'A'")
+    }
+
+    @Test
+    fun testKtorStyleNestedEndpoint() {
+        val response = makeRequest("/ktor/nested")
+        assertEquals(200, response.code, "Expected status code 200")
+
+        val responseBody = response.body?.string()
+        assertNotNull(responseBody, "Response body should not be null")
+
+        assertTrue(responseBody.contains("\"char\":\"B\""), "Response should contain char 'B'")
     }
 
     /**

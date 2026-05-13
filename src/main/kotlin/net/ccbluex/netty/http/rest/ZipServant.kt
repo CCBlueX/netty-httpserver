@@ -26,10 +26,11 @@ import io.netty.handler.codec.http.DefaultHttpHeaders
 import io.netty.handler.codec.http.EmptyHttpHeaders
 import io.netty.handler.codec.http.FullHttpResponse
 import io.netty.handler.codec.http.HttpHeaderNames
+import io.netty.handler.codec.http.HttpMethod
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.HttpVersion
+import net.ccbluex.netty.http.application.ApplicationCall
 import net.ccbluex.netty.http.util.httpNotFound
-import net.ccbluex.netty.http.model.RequestObject
 import org.apache.tika.Tika
 import java.io.InputStream
 import java.util.zip.ZipEntry
@@ -110,8 +111,8 @@ class ZipServant(part: String, zipInputStream: InputStream) : Node(part) {
         return files
     }
 
-    override suspend fun handle(request: RequestObject): FullHttpResponse {
-        val path = request.remainingPath.removePrefix("/")
+    override suspend fun handle(call: ApplicationCall): FullHttpResponse {
+        val path = call.remainingPath.removePrefix("/")
         val cleanPath = path.substringBefore("?")
         val sanitizedPath = cleanPath.replace("..", "")
 
@@ -181,4 +182,6 @@ class ZipServant(part: String, zipInputStream: InputStream) : Node(part) {
 
         return httpNotFound(sanitizedPath, "File not found in zip archive")
     }
+
+    override fun matchesMethod(method: HttpMethod) = method == HttpMethod.GET
 }

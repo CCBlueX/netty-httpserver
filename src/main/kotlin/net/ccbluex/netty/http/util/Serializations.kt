@@ -25,6 +25,7 @@ import io.netty.buffer.ByteBuf
 import io.netty.buffer.ByteBufAllocator
 import java.lang.reflect.Type
 
+@PublishedApi
 internal val DEFAULT_GSON = Gson()
 
 /**

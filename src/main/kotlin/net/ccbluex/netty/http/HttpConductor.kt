@@ -21,11 +21,12 @@ package net.ccbluex.netty.http
 
 import io.netty.handler.codec.http.*
 import net.ccbluex.netty.http.HttpServer.Companion.logger
+import net.ccbluex.netty.http.application.ApplicationCall
+import net.ccbluex.netty.http.application.ResponseException
 import net.ccbluex.netty.http.model.RequestContext
 import net.ccbluex.netty.http.util.httpBadRequest
 import net.ccbluex.netty.http.util.httpInternalServerError
 import net.ccbluex.netty.http.util.httpNotFound
-import net.ccbluex.netty.http.model.RequestObject
 import net.ccbluex.netty.http.util.httpNoContent
 
 /**
@@ -54,18 +55,23 @@ internal suspend fun HttpServer.processRequestContext(context: RequestContext) =
         return@runCatching httpNotFound(context.path, "Route not found")
 
     logger.debug("Found destination {}", node)
-    val requestObject = RequestObject(
+    val call = ApplicationCall(
         uri = context.uri,
         path = context.path,
         remainingPath = remaining,
         method = method,
         body = content.toString(Charsets.UTF_8),
-        params = params,
-        queryParams = context.params,
+        parameters = params,
+        queryParameters = context.params,
         headers = context.headers
     )
 
-    return@runCatching node.handle(requestObject)
+    return@runCatching node.handle(call)
+}.recoverCatching {
+    if (it is ResponseException) {
+        return@recoverCatching it.response
+    }
+    throw it
 }.getOrElse {
     logger.error("Error while processing request object: $context", it)
     httpInternalServerError(it.message ?: "Unknown error")

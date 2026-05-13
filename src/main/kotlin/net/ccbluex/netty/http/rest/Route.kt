@@ -20,8 +20,7 @@
 package net.ccbluex.netty.http.rest
 
 import io.netty.handler.codec.http.HttpMethod
-import net.ccbluex.netty.http.model.RequestHandler
-import net.ccbluex.netty.http.model.RequestObject
+import net.ccbluex.netty.http.routing.RoutingHandler
 
 /**
  * Represents a route in the routing tree.
@@ -30,11 +29,10 @@ import net.ccbluex.netty.http.model.RequestObject
  * @property method The HTTP method of the route.
  * @property handler The handler function for the route.
  */
-open class Route(name: String, private val method: HttpMethod, val handler: RequestHandler)
-    : Node(name) {
-    override val isExecutable = true
-    override suspend fun handle(request: RequestObject) = handler.handle(request)
-    override fun matchesMethod(method: HttpMethod) =
-        this.method == method && super.matchesMethod(method)
+open class Route(name: String, method: HttpMethod, handler: RoutingHandler) : Node(name) {
+
+    init {
+        registerMethodHandler(method, handler)
+    }
 
 }

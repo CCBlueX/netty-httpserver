@@ -21,10 +21,10 @@ package net.ccbluex.netty.http.rest
 
 import io.netty.handler.codec.http.FullHttpResponse
 import io.netty.handler.codec.http.HttpMethod
+import net.ccbluex.netty.http.application.ApplicationCall
 import net.ccbluex.netty.http.util.httpFile
 import net.ccbluex.netty.http.util.httpForbidden
 import net.ccbluex.netty.http.util.httpNotFound
-import net.ccbluex.netty.http.model.RequestObject
 import java.io.File
 
 /**
@@ -37,8 +37,8 @@ class FileServant(part: String, private val baseFolder: File) : Node(part) {
 
     override val isExecutable = true
 
-    override suspend fun handle(request: RequestObject): FullHttpResponse {
-        val path = request.remainingPath
+    override suspend fun handle(call: ApplicationCall): FullHttpResponse {
+        val path = call.remainingPath
         val sanitizedPath = path.replace("..", "")
         val file = baseFolder.resolve(sanitizedPath)
 
@@ -59,7 +59,6 @@ class FileServant(part: String, private val baseFolder: File) : Node(part) {
 
     override fun matches(index: Int, part: String) = super.matches(index, part) || index == 0 && isRoot
 
-    override fun matchesMethod(method: HttpMethod) =
-        method == HttpMethod.GET && super.matchesMethod(method)
+    override fun matchesMethod(method: HttpMethod) = method == HttpMethod.GET
 
 }
