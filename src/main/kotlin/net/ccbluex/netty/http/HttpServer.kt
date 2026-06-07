@@ -122,7 +122,7 @@ class HttpServer {
     suspend fun stop() = lock.withLock {
         logger.info("Shutting down Netty server...")
         try {
-            webSocketController?.disconnect()
+            webSocketController?.disconnectAsync()
             serverChannel?.close()?.awaitSuspend()
             bossGroup?.shutdownGracefully()?.awaitSuspend()
             workerGroup?.shutdownGracefully()?.awaitSuspend()

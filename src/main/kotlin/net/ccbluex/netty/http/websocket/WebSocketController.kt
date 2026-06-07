@@ -30,6 +30,7 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
 import net.ccbluex.netty.http.HttpServer.Companion.logger
 import net.ccbluex.netty.http.coroutines.syncSuspend
 import java.nio.channels.ClosedChannelException
@@ -100,10 +101,25 @@ class WebSocketController(
      * Closes all active contexts.
      */
     fun disconnect() {
-        activeContexts.removeIf { handlerContext ->
-            runCatching {
-                handlerContext.channel().close().sync()
-            }.isSuccess
+        val contexts = activeContexts.toTypedArray()
+        activeContexts.clear()
+
+        contexts.forEach { handlerContext ->
+            handlerContext.channel().close().sync()
+        }
+    }
+
+    /**
+     * Closes all active contexts async.
+     */
+    suspend fun disconnectAsync() = supervisorScope {
+        val contexts = activeContexts.toTypedArray()
+        activeContexts.clear()
+
+        contexts.forEach { handlerContext ->
+            launch {
+                handlerContext.channel().close().syncSuspend()
+            }
         }
     }
 
